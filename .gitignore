@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.sites-local/
+*.tar.gz
+*.log
+.env
+.env.*
+!.env.example
