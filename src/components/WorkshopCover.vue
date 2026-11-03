@@ -1,27 +1,27 @@
 <script setup>
 import { guides } from '../workshop/guides.js'
 import Icon from './Icon.vue'
+defineProps({ phase:String })
 defineEmits(['open','guide'])
 </script>
 
 <template>
-  <section class="cover" aria-label="Portada del cuaderno de taller">
-    <div class="edition-line"><span>ARCHIVO DE REPARACIÓN</span><span>LAPTOPS & PC</span><span>EDICIÓN N.º 03</span></div>
+  <section class="cover" aria-label="Portada de Placa Lab">
+    <div class="edition-line"><span>ESCUELA DE DIAGNÓSTICO</span><span>LAPTOPS & PC</span><span>EDICIÓN N.º 04</span></div>
     <div class="cover-spread">
       <div class="cover-copy">
-        <div class="folio-kicker"><i></i> MANUAL INTERACTIVO</div>
-        <h1>Cuaderno<br><em>de taller.</em></h1>
-        <p>Reconoce lo que hay dentro de tu equipo. Aprende a cuidarlo, ampliarlo y elegir la pieza que encaja.</p>
+        <div class="folio-kicker"><i></i> SIMULADOR PARA APRENDICES</div>
+        <h1>Tu primer<br><em>diagnóstico.</em></h1>
+        <p>¿Ya sabes cambiar RAM o instalar un SSD? Da el siguiente paso. Recibe una laptop averiada, decide dónde medir y explica la falla con tus propias lecturas.</p>
         <div class="cover-actions">
-          <button class="print-button vermilion" @click="$emit('guide','limpieza')">Abrir el manual <Icon name="ArrowRight" :size="17"/></button>
-          <button class="ink-link" @click="$emit('open','lab')">Explorar en 3D <Icon name="ArrowUpRight" :size="16"/></button>
+          <button class="print-button vermilion" @click="$emit('open','turno')">{{ phase==='closed'?'Ver mi caso resuelto':phase==='intake'?'Empezar mi primer turno':'Continuar mi turno' }} <Icon name="ArrowRight" :size="17"/></button>
+          <button class="ink-link" @click="$emit('guide','limpieza')">Consultar el manual <Icon name="ArrowUpRight" :size="16"/></button>
         </div>
       </div>
       <figure class="blue-plate">
-        <div class="plate-metadata"><span><i></i> LÁMINA DE DESPIECE</span><span>FIG. 01</span></div>
-        <img src="/workshop-plate.svg" alt="Despiece isométrico de una laptop con la memoria SO-DIMM, SSD, disipador y turbina identificados." />
-        <p class="plate-key"><span><b>01</b> Memoria SO-DIMM</span><span><b>02</b> SSD M.2</span><span><b>03</b> Disipador</span><span><b>04</b> Turbina</span></p>
-        <figcaption><span>PORTÁTIL / VISTA ISOMÉTRICA</span><button @click="$emit('open','lab')">Inspeccionar <Icon name="ArrowUpRight" :size="14"/></button></figcaption>
+        <div class="plate-metadata"><span><i></i> RECEPCIÓN DE EQUIPOS</span><span>ORDEN / 001</span></div>
+        <img src="/turno-recepcion.svg" alt="En el banco de diagnóstico esperan una laptop apagada, su adaptador y un multímetro."/>
+        <figcaption><span>CASO 001 · UNA LAPTOP SIN SEÑALES</span><button @click="$emit('open','turno')">Abrir orden ↗</button></figcaption>
       </figure>
     </div>
     <nav class="cover-routes" aria-label="Recorridos del laboratorio"><span class="folio-kicker">EN EL LABORATORIO</span><button @click="$emit('open','lab','energia')"><Icon name="Zap" :size="17"/> Sigue el encendido ↗</button><button @click="$emit('open','lab','calor')"><Icon name="Flame" :size="17"/> Sigue el calor ↗</button></nav>

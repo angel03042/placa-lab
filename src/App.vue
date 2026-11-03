@@ -2,6 +2,8 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import Icon from './components/Icon.vue'
 import WorkshopCover from './components/WorkshopCover.vue'
+import TurnoCase from './components/TurnoCase.vue'
+import { newTicket, restoreTicket } from './game/turno.js'
 import GuideBook from './components/GuideBook.vue'
 import FitBench from './components/FitBench.vue'
 import { guides } from './workshop/guides.js'
@@ -29,11 +31,18 @@ const completed=ref([]),solved=ref([]),reducedMotion=ref(false),storageAvailable
 const step=ref(-1),playing=ref(false),diagnosticPower=ref(false),diagnosticCase=ref('no-power')
 let timer,toastTimer
 const nav = [
-  {id:'home',name:'Portada'}, {id:'workshop',name:'Mantenimiento'},
+  {id:'home',name:'Portada'}, {id:'turno',name:'Turno de taller'}, {id:'workshop',name:'Mantenimiento'},
   {id:'fit',name:'Compatibilidad'}, {id:'lab',name:'Laboratorio 3D'},
   {id:'library',name:'Componentes'}, {id:'diagnostics',name:'Diagnóstico'},
   {id:'lessons',name:'Ruta de aprendizaje'}, {id:'glossary',name:'Glosario técnico'},
 ]
+const ticket = ref(newTicket())
+const readingForCase = ref(false)
+function consultPower() {
+  setDevice('laptop')
+  navigate('lab','energia')
+  readingForCase.value = true
+}
 const guideId = ref('limpieza')
 const fitKind = ref('ram')
 const guideRecords = ref({})
@@ -93,11 +102,12 @@ const matchingTerms=computed(()=>glossary.filter(([term,definition])=>`${term} $
 const sceneStep=computed(()=>view.value==='diagnostics'?(diagnosticPower.value?(diagnosticCase.value==='no-power'?0:diagnosticCase.value==='no-display'?3:5):-1):step.value)
 
 function notify(message){toast.value=message;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.value='',4800)}
-function save(){try{localStorage.setItem('placa-lab:v1',JSON.stringify({completed:completed.value,solved:solved.value,reducedMotion:reducedMotion.value,guideRecords:guideRecords.value,device:device.value}))}catch{storageAvailable.value=false}}
+function save(){try{localStorage.setItem('placa-lab:v1',JSON.stringify({completed:completed.value,solved:solved.value,reducedMotion:reducedMotion.value,guideRecords:guideRecords.value,device:device.value,ticket:ticket.value}))}catch{storageAvailable.value=false}}
 function navigate(id, sub, push = true) {
   if (id === 'workshop' && guides.some(g => g.id === sub)) guideId.value = sub
   if (id === 'fit' && ['ram','ssd'].includes(sub)) fitKind.value = sub
   view.value = id
+  readingForCase.value = false
   mobileMenu.value = false
   search.value = ''
   stop()
@@ -161,11 +171,11 @@ function play() {
 function completeLesson(id){if(!completed.value.includes(id)){completed.value.push(id);save();notify('Una idea más clara. Lección completada.')}}
 function exploreLesson(lesson){activeLesson.value=null;navigate(['meter','faults','method'].includes(lesson.id)?'diagnostics':'lab');selectPart(lesson.focus);if(lesson.id==='power')play()}
 function solveCase(id){if(!solved.value.includes(id)){solved.value.push(id);save();notify('Caso resuelto. Tu diagnóstico tiene evidencia.')}}
-function resetProgress(){completed.value=[];solved.value=[];guideRecords.value={};save();confirmReset.value=false;notify('Tu progreso se ha reiniciado.')}
+function resetProgress(){ticket.value=newTicket();completed.value=[];solved.value=[];guideRecords.value={};save();confirmReset.value=false;notify('Tu progreso se ha reiniciado.')}
 function keydown(e){if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();mobileMenu.value=true;nextTick(()=>searchInput.value?.focus())}if(e.key==='Escape'){search.value='';mobileMenu.value=false}}
-watch(reducedMotion,save)
+watch([reducedMotion,ticket],save)
 onMounted(()=>{
-  try{const stored=JSON.parse(localStorage.getItem('placa-lab:v1')||'{}');device.value=stored.device==='desktop'?'desktop':'laptop';guideRecords.value=validatedRecords(stored.guideRecords);completed.value=Array.isArray(stored.completed)?[...new Set(stored.completed.filter(id=>lessons.some(l=>l.id===id)))]:[];solved.value=Array.isArray(stored.solved)?[...new Set(stored.solved.filter(id=>['no-power','no-display'].includes(id)))]:[];reducedMotion.value=stored.reducedMotion??window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch{storageAvailable.value=false}
+  try{const stored=JSON.parse(localStorage.getItem('placa-lab:v1')||'{}');device.value=stored.device==='desktop'?'desktop':'laptop';guideRecords.value=validatedRecords(stored.guideRecords);ticket.value=restoreTicket(stored.ticket);completed.value=Array.isArray(stored.completed)?[...new Set(stored.completed.filter(id=>lessons.some(l=>l.id===id)))]:[];solved.value=Array.isArray(stored.solved)?[...new Set(stored.solved.filter(id=>['no-power','no-display'].includes(id)))]:[];reducedMotion.value=stored.reducedMotion??window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch{storageAvailable.value=false}
   restorePage()
   window.addEventListener('popstate',restorePage)
   document.addEventListener('keydown',keydown)
@@ -184,7 +194,7 @@ onBeforeUnmount(()=>{window.removeEventListener('popstate',restorePage);stop();c
           <b>PLACA<span>LAB</span></b>
         </a>
         <nav class="press-nav" aria-label="Secciones principales">
-          <button v-for="item in nav.slice(0,4)" :key="item.id" :aria-current="view===item.id?'page':undefined" @click="navigate(item.id)">{{ item.name }}</button>
+          <button v-for="item in nav.slice(0,5)" :key="item.id" :aria-current="view===item.id?'page':undefined" @click="navigate(item.id)">{{ item.name }}</button>
         </nav>
         <button class="index-trigger" :aria-expanded="mobileMenu" aria-controls="press-index" @click="mobileMenu=!mobileMenu"><Icon :name="mobileMenu?'X':'Menu'" :size="17"/> Índice</button>
       </div>
@@ -203,10 +213,12 @@ onBeforeUnmount(()=>{window.removeEventListener('popstate',restorePage);stop();c
     </header>
     <div class="main-shell">
       <main id="main" class="main-content" tabindex="-1">
-        <WorkshopCover v-if="view==='home'" @open="navigate" @guide="openGuide" />
+        <TurnoCase v-if="view==='turno'" v-model="ticket" :reduced-motion="reducedMotion" @solve="solveCase" @reference="consultPower"/>
+        <WorkshopCover v-if="view==='home'" :phase="ticket.phase" @open="navigate" @guide="openGuide" />
         <GuideBook v-if="view==='workshop'" :device="device" :guide-id="guideId" :records="guideRecords" @device="setDevice" @guide="openGuide" @record="saveStep" @inspect="inspectGuidePart" @fit="openFit" />
         <KeepAlive><FitBench v-if="view==='fit'" :kind="fitKind" @kind="openFit" @guide="openGuide" /></KeepAlive>
-        <section v-if="!['home','workshop','fit'].includes(view)" class="page-heading folio-intro"><div><div class="folio-kicker"><i></i> CUADERNO DE TALLER / {{ nav.find(n=>n.id===view)?.name }}</div><h1>{{ title }}</h1><p>{{ subtitle }}</p></div><button class="folio-progress" @click="navigate('lessons')">{{ completed.length }} / {{ lessons.length }} lecciones ↗</button></section>
+        <section v-if="!['home','turno','workshop','fit'].includes(view)" class="page-heading folio-intro"><div><div class="folio-kicker"><i></i> CUADERNO DE TALLER / {{ nav.find(n=>n.id===view)?.name }}</div><h1>{{ title }}</h1><p>{{ subtitle }}</p></div><button class="folio-progress" @click="navigate('lessons')">{{ completed.length }} / {{ lessons.length }} lecciones ↗</button></section>
+        <button v-if="view==='lab' && readingForCase" class="case-link return-case" @click="navigate('turno')">← Volver a mi orden de taller</button>
         <template v-if="view==='lab'||view==='diagnostics'">
           <section class="lab-layout" :class="{'diagnostics-layout':view==='diagnostics'}" aria-label="Laboratorio interactivo">
             <div class="workbench">
@@ -244,11 +256,11 @@ onBeforeUnmount(()=>{window.removeEventListener('popstate',restorePage);stop();c
         <section v-else-if="view==='library'" class="library-page"><div class="library-toolbar"><div class="device-tabs"><button :class="{active:device==='laptop'}" @click="setDevice('laptop')"><Icon name="Laptop" :size="17" /> Laptop</button><button :class="{active:device==='desktop'}" @click="setDevice('desktop')"><Icon name="Monitor" :size="17" /> PC de escritorio</button></div><span>{{ parts.length }} componentes para explorar</span></div><div class="filter-tabs" aria-label="Filtrar componentes"><button v-for="category in categories" :key="category" :class="{active:libraryFilter===category}" @click="libraryFilter=category">{{ category }}</button></div><div class="component-grid"><button v-for="c in filteredParts" :key="c.id" class="library-card" @click="searchSelect(c.id)"><div class="library-card-art" :style="{'--part-color':c.color}"><img v-if="illustrationFor(c.id,device)" :src="illustrationFor(c.id,device)" :alt="c.name" /><Icon v-else :name="c.icon" :size="51" /><span>{{ c.ref }}</span><div class="component-crosshair"></div></div><div class="library-card-body"><span class="eyebrow">{{ c.category }}</span><h3>{{ c.name }}</h3><p>{{ c.summary }}</p><span class="library-card-link">Explorar en la placa <Icon name="ArrowUpRight" :size="16" /></span></div></button></div></section>
 
         <section v-else-if="view==='glossary'" class="glossary-page"><div class="glossary-search"><Icon name="Search" :size="20" /><input v-model="glossarySearch" aria-label="Buscar término en el glosario" placeholder="Busca un término, por ejemplo: VCORE…" /></div><div class="glossary-grid"><article v-for="[term,definition] in matchingTerms" :key="term"><span class="glossary-mark">↗</span><h3>{{ term }}</h3><p>{{ definition }}</p></article><p v-if="!matchingTerms.length" class="empty-small">No encontramos ese término. Prueba “tensión”, “memoria” o “GND”.</p></div><div class="reference-section"><div><Icon name="Library" :size="24" /><h2>Del modelo a la documentación.</h2><p>Este laboratorio ilustra principios generales. Para trabajar en una placa real, usa el manual de servicio, el esquema de esa revisión y las hojas de datos. No todos los equipos comparten tensiones, componentes o secuencias.</p></div><div class="source-links"><a v-for="source in sources" :key="source.url" :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }}<Icon name="ArrowUpRight" :size="16" /></a></div></div></section>
-        <footer class="page-footer"><span><Icon name="CircuitBoard" :size="14" /> PLACA LAB <span class="footer-divider">/</span> Cuaderno de taller · Edición 03</span><span>{{ storageAvailable?'Tu progreso se guarda en este dispositivo':'Almacenamiento no disponible · progreso solo en esta sesión' }}<span class="tiny-dot"></span></span></footer>
+        <footer class="page-footer"><span><Icon name="CircuitBoard" :size="14" /> PLACA LAB <span class="footer-divider">/</span> Escuela de diagnóstico · Edición 04</span><span>{{ storageAvailable?'Tu progreso se guarda en este dispositivo':'Almacenamiento no disponible · progreso solo en esta sesión' }}<span class="tiny-dot"></span></span></footer>
       </main>
     </div>
     <LessonModal v-if="activeLesson" :key="activeLesson.id" :lesson="activeLesson" :completed="completed.includes(activeLesson.id)" @close="activeLesson=null" @complete="completeLesson" @explore="exploreLesson" />
-    <dialog ref="settings" class="settings-dialog"><div class="dialog-content"><button class="icon-button close-dialog" aria-label="Cerrar preferencias" @click="settings.close()"><Icon name="X" /></button><span class="eyebrow">A TU MANERA</span><h2>Tu espacio de trabajo.</h2><div class="setting-row"><span><strong>Reducir movimiento</strong><small>Mantiene fijas las flechas de los recorridos y evita los desplazamientos animados.</small></span><button role="switch" class="switch" :class="{on:reducedMotion}" :aria-checked="reducedMotion" aria-label="Reducir movimiento" @click="reducedMotion=!reducedMotion"><span></span></button></div><div class="setting-row"><span><strong>Progreso local</strong><small>{{ completed.length }} lecciones y {{ solved.length }} casos resueltos.</small></span><button class="text-link" @click="confirmReset=true">Reiniciar</button></div><div v-if="confirmReset" class="reset-confirm"><p>Se borrará el progreso de este navegador.</p><button class="button button-outline" @click="confirmReset=false">Conservar</button><button class="button button-dark" @click="resetProgress">Reiniciar progreso</button></div><p class="help-text">El avance de las guías, las lecciones y los casos se guarda en este navegador.</p></div></dialog>
+    <dialog ref="settings" class="settings-dialog"><div class="dialog-content"><button class="icon-button close-dialog" aria-label="Cerrar preferencias" @click="settings.close()"><Icon name="X" /></button><span class="eyebrow">A TU MANERA</span><h2>Tu espacio de trabajo.</h2><div class="setting-row"><span><strong>Reducir movimiento</strong><small>Mantiene fijas las flechas de los recorridos y evita los desplazamientos animados.</small></span><button role="switch" class="switch" :class="{on:reducedMotion}" :aria-checked="reducedMotion" aria-label="Reducir movimiento" @click="reducedMotion=!reducedMotion"><span></span></button></div><div class="setting-row"><span><strong>Progreso local</strong><small>{{ completed.length }} lecciones y {{ solved.length }} casos resueltos.</small></span><button class="text-link" @click="confirmReset=true">Reiniciar</button></div><div v-if="confirmReset" class="reset-confirm"><p>Se borrará el progreso de este navegador.</p><button class="button button-outline" @click="confirmReset=false">Conservar</button><button class="button button-dark" @click="resetProgress">Reiniciar progreso</button></div><p class="help-text">Tu orden de taller, tus guías, las lecciones y los casos se guardan en este navegador.</p></div></dialog>
     <Transition name="toast"><div v-if="toast" class="toast-message" role="status"><Icon name="CircleCheck" :size="19" />{{ toast }}<button aria-label="Cerrar aviso" @click="toast=''"><Icon name="X" :size="15" /></button></div></Transition>
   </div>
 </template>
