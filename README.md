@@ -24,9 +24,12 @@ El sitio es estático y el resultado está en `dist/`. Es compatible con Vercel,
 ## Qué incluye
 
 - Vue 3 con Composition API, Vite, Tailwind CSS 4, JavaScript y Lucide.
-- Modelos 3D propios generados con Three.js: laptop y PC con 12 componentes seleccionables cada una, rotación, zoom, etiquetas y vista restablecible.
-- Fichas con función, señales, ubicación, síntomas y criterios de diagnóstico.
+- Modelos 3D propios generados con Three.js: 19 tipos de componente en laptop y 18 en PC, rotación, zoom, selección y acercamiento por pieza.
+- Laptop con carcasa, teclado y pantalla; vistas Equipo, Interior, Placa y Despiece. La PC ofrece Interior, Placa y Despiece.
+- SO-DIMM horizontal con contactos, muesca y clips; DIMM de escritorio vertical; SSD M.2, turbina o ventilador axial, batería, placa térmica, tubos, aletas, resistencias, bobinas, MLCC, capacitores de polímero, fusible y diodo.
+- Fichas con reconocimiento por forma y encapsulado, función, señales, ubicación, síntomas y criterios de diagnóstico. Catorce ilustraciones generadas con el kit de Anatomy.
 - Secuencia conceptual de encendido con reproducción, pausa y selección manual de etapas.
+- Recorridos visuales de energía y calor. Giro del ventilador deliberadamente lento, sin asignar RPM; no es una simulación térmica numérica.
 - Multímetro virtual de tensión y resistencia, registro de mediciones y comprobación de hipótesis.
 - Referencia sana y dos casos: no enciende y enciende sin imagen.
 - Seis lecciones con preguntas, glosario, búsqueda, filtros y progreso en localStorage.
@@ -35,7 +38,12 @@ El sitio es estático y el resultado está en `dist/`. Es compatible con Vercel,
 ## Archivos principales
 
 - `src/App.vue`: navegación, laboratorio y vistas de aprendizaje.
-- `src/components/BoardScene.vue`: geometría, cámara y selección del modelo 3D.
+- `src/components/BoardScene.vue`: cámara, controles, selección, estados y animación temporal.
+- `src/three/model.js`, `parts.js`, `layout.js`: conjuntos físicos, primitivas y disposición.
+- `src/recognition.js`: pistas visuales y catálogo ampliado.
+- `scripts/component-illustrations.mjs`: genera los SVG de reconocimiento con Anatomy; se ejecuta en cada build.
+- `scripts/vendor/anatomy/`: kit original y licencia MIT conservada.
+- `docs/model-plan.md`: concepto y lista de partes previa al modelado.
 - `src/components/DiagnosticPanel.vue`: instrumento virtual y casos.
 - `src/components/LessonModal.vue`: lecciones y preguntas.
 - `src/data.js`: contenido educativo editable.
@@ -57,6 +65,10 @@ El progreso se guarda únicamente en este navegador (`placa-lab:v1`). No hay cue
 - [Texas Instruments BQ24780S](https://www.ti.com/product/BQ24780S): ejemplo de controlador de carga y selección de alimentación.
 - [Texas Instruments TPS51225C](https://www.ti.com/product/TPS51225C): ejemplo de regulación a 3,3 V y 5 V, habilitación y Power Good.
 - [UEFI Forum](https://uefi.org/specifications): documentación del firmware.
+- [Kingston SO-DIMM DDR4](https://www.kingston.com/dataSheets/KVR32S22S8_8.pdf): proporciones y paquetes de memoria.
+- [Dell Latitude 5420, componentes internos](https://www.dell.com/support/manuals/en-ca/latitude-5420-laptop/5420_sp14_sm/major-components-of-your-computer?guid=guid-77d0d5e8-58ab-4b5e-b788-435b7ca979d9&lang=en-us): arquitectura general; el modelo didáctico no reproduce una Dell.
+- [Coilcraft XAL50xx](https://www.coilcraft.com/en-us/products/power/shielded-inductors/molded-inductor/xal/xal50xx/): bobinas blindadas moldeadas.
+- [Anatomy, wheresryan22](https://github.com/wheresryan22/anatomy): criterios de detalle funcional y kit SVG, licencia MIT. El modelo principal conserva Three.js y no depende de instalar la skill para funcionar.
 - [Vue](https://vuejs.org/), [Vite](https://vite.dev/guide/), [Tailwind](https://tailwindcss.com/docs/installation/using-vite), [Three.js](https://threejs.org/docs/).
 
 ## Posibles ampliaciones
