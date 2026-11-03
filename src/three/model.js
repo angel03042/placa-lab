@@ -4,7 +4,7 @@ import { ramSize, laptopLayout as L } from './layout.js'
 
 export function createModel(device) {
   const laptop=device==='laptop',p=createParts(),{box,cylinder,tube,text,screw,smd,chip,inductor}=p
-  const root=new THREE.Group(),groups={},parts={},rotors=[]
+  const root=new THREE.Group(),groups={},parts={},rotors=[],flowAnchors={}
   function group(name,parent=root){const g=new THREE.Group();parent.add(g);groups[name]=g;return g}
   const chassis=group('chassis'),pcb=group('pcb'),ram=group('ram',pcb),ssd=group('ssd',pcb),thermal=group('thermal',pcb),battery=group('battery'),exterior=group('exterior')
   exterior.position.y=-.48
@@ -119,6 +119,23 @@ export function createModel(device) {
     box(io,x+(laptop?.29:-.29),.31,z,.016,.065,.41,'#3c7390','io',.2,.01)
     for(const side of[-1,1])box(io,x,.12,z+side*.4,.3,.035,.14,'#bec4c1','io',.8,.005)
   }
+  if (!laptop) {
+    // Reference points for the two power connectors and the soft-power circuit.
+    const eps = box(pcb,-1.9,.37,-3.75,1.15,.51,.48,'#303b43')
+    for (let row=0;row<2;row++) for (let col=0;col<4;col++) {
+      box(eps,-.39+col*.26,.258,-.12+row*.24,.18,.012,.16,'#11191f',null,0,.006)
+    }
+    const header = box(pcb,-1,.16,3.78,.7,.12,.3,'#252f35')
+    for (let i=0;i<4;i++) for (const z of [-.08,.08]) {
+      box(header,-.23+i*.15,.13,z,.044,.2,.044,'#d3b776',null,.65,.003)
+    }
+    chip(pcb,1.68,.55,.42,.39,null,8)
+    text(pcb,'CPU 12V',-1.9,.122,-3.28,.72,.15)
+    text(pcb,'F_PANEL',-1,.122,3.49,.66,.14)
+    flowAnchors['cpu-input'] = new THREE.Vector3(-1.9,.64,-3.75)
+    flowAnchors['power-switch'] = new THREE.Vector3(-1,.42,3.78)
+    flowAnchors['standby-control'] = new THREE.Vector3(1.68,.27,.55)
+  }
   // Purposeful routes between populated regions, plus vias and test pads.
   for(let i=0;i<18;i++){
     const start=laptop?[.03,.112,-1.9+i*.04]:[.48,.112,-1.6+i*.04],end=laptop?[.15+i*.055,.112,-.9]:[1.95,.112,-.9+i*.04]
@@ -166,5 +183,5 @@ export function createModel(device) {
     const rotor=new THREE.Group();rotor.position.set(cx,1.75,cz);fg.add(rotor);rotors.push(rotor);cylinder(rotor,0,0,0,.3,.2,'#303d46','fan')
     for(let i=0;i<7;i++){const a=i*Math.PI*2/7,o=box(rotor,Math.cos(a)*.57,0,Math.sin(a)*.57,.67,.07,.32,'#404e57','fan',.1,.08);o.rotation.y=-a+.4}
   }
-  return {root,groups,parts,rotors,selectables:p.selectables,dispose:p.dispose}
+  return {root,groups,parts,rotors,flowAnchors,selectables:p.selectables,dispose:p.dispose}
 }

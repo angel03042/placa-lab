@@ -20,9 +20,11 @@ defineEmits(['open','guide'])
       <figure class="blue-plate">
         <div class="plate-metadata"><span><i></i> LÁMINA DE DESPIECE</span><span>FIG. 01</span></div>
         <img src="/workshop-plate.svg" alt="Despiece isométrico de una laptop con la memoria SO-DIMM, SSD, disipador y turbina identificados." />
+        <p class="plate-key"><span><b>01</b> Memoria SO-DIMM</span><span><b>02</b> SSD M.2</span><span><b>03</b> Disipador</span><span><b>04</b> Turbina</span></p>
         <figcaption><span>PORTÁTIL / VISTA ISOMÉTRICA</span><button @click="$emit('open','lab')">Inspeccionar <Icon name="ArrowUpRight" :size="14"/></button></figcaption>
       </figure>
     </div>
+    <nav class="cover-routes" aria-label="Recorridos del laboratorio"><span class="folio-kicker">EN EL LABORATORIO</span><button @click="$emit('open','lab','energia')"><Icon name="Zap" :size="17"/> Sigue el encendido ↗</button><button @click="$emit('open','lab','calor')"><Icon name="Flame" :size="17"/> Sigue el calor ↗</button></nav>
     <div class="catalog-title"><div><div class="folio-kicker"><i></i> ÍNDICE DE SERVICIO</div><h2>Procedimientos <em>de banco</em></h2></div><span class="folio-count">01 — 04</span></div>
     <div class="procedure-index">
       <button v-for="guide in guides" :key="guide.id" @click="$emit('guide',guide.id)">

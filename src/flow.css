@@ -1,0 +1,46 @@
+/* Controls and live annotation for the two physical paths. */
+.flow-bar, .flow-transport, .flow-key { display:flex; align-items:center; flex-wrap:wrap; }
+.flow-bar { padding:14px clamp(12px,2vw,24px); gap:16px; justify-content:space-between; background:#192e4c; color:#fffdf5; }
+.flow-kicker { font:600 .75rem/1.45 var(--mono); letter-spacing:.1em; }
+.flow-bar .flow-kicker { color:#cfdef0; }
+.flow-bar-heading strong { display:block; font:500 clamp(1.25rem,2vw,1.6rem)/1.2 var(--type); }
+.flow-tabs { display:flex; gap:5px; }
+.flow-tabs button, .flow-transport button { min-height:42px; display:inline-flex; gap:7px; align-items:center; justify-content:center; padding:8px 12px; font:650 .9rem/1.35 var(--heading); border:1px solid #8295ab; }
+.flow-tabs button { color:#fffdf5; background:#233c5a; }
+.flow-tabs button:hover, .flow-tabs button[aria-pressed="true"] { background:#fff3cd; color:#233047; border-color:#ffe297; }
+.flow-tabs button:nth-child(2)[aria-pressed="true"] { background:#ffe4d8; color:#572819; border-color:#ffad8b; }
+.flow-stage-caption { position:absolute; z-index:4; left:12px; top:12px; max-width:calc(100% - 24px); border-left:5px solid #ffcd53; background:#16283e; color:#fff; pointer-events:none; padding:7px 12px; box-shadow:2px 3px 0 #14233624; }
+.showing-heat .flow-stage-caption { border-color:#ff7958; }
+.flow-stage-caption span { display:block; color:#dbe5ef; font:600 .75rem/1.35 var(--mono); text-transform:uppercase; }
+.flow-stage-caption strong { font:650 .94rem/1.4 var(--heading); }
+.showing-flow .stage-coordinates, .showing-flow .stage-scale { display:none; }
+.flow-transport { gap:8px; background:#ebe7db; color:var(--carbon); padding:12px clamp(12px,2vw,24px); }
+.flow-transport button { color:var(--carbon); background:#fffdf5; border-color:#8a8c83; }
+.flow-transport button:disabled { background:#eeece4; color:#62655f; border-style:dashed; cursor:default; }
+.flow-transport .flow-play { background:#243b55; color:white; border-color:#243b55; }
+.flow-transport .close-flow { margin-left:auto; padding-inline:10px; }
+.flow-transport>span { font-size:.94rem; }
+.flow-readout { background:var(--paper-white); padding:clamp(16px,2.5vw,30px); color:var(--carbon); }
+.flow-reading { display:grid; grid-template-columns:auto minmax(0,1fr); gap:clamp(12px,2.5vw,24px); }
+.flow-page { font:500 clamp(2rem,4vw,3.75rem)/1 var(--type); color:#91361f; border-right:1px solid #b9b7aa; padding-right:clamp(8px,1.5vw,18px); }
+.flow-page small { display:block; font:.8rem/1.6 var(--mono); color:#4c5655; text-align:center; }
+.flow-reading .flow-kicker { color:#4a5661; }
+.flow-reading h2 { margin:4px 0 8px; font:500 clamp(1.45rem,2.6vw,2.15rem)/1.1 var(--type); }
+.flow-chain { display:flex; flex-wrap:wrap; align-items:center; gap:7px; color:#2d4760; font:650 .94rem/1.4 var(--heading); }
+.flow-reading p { margin:10px 0; max-width:72ch; font:400 1rem/1.55 var(--heading); }
+.flow-value { display:inline-block; background:#e8eef1; border-left:3px solid #415c73; padding:4px 8px; font:600 .85rem/1.45 var(--mono); }
+.flow-stages { margin:17px 0 12px; display:grid; grid-template-columns:repeat(auto-fit,minmax(91px,1fr)); gap:5px; }
+.flow-stages button { font:600 .875rem/1.35 var(--heading); color:#3c4548; border:1px solid #a7aca6; background:#f2f1e9; padding:7px; text-align:left; }
+.flow-stages button span { display:block; font:.75rem/1.5 var(--mono); }
+.flow-stages button[aria-current="step"] { background:#243b55; color:white; border-color:#243b55; box-shadow:inset 0 -3px #ffd15a; }
+.flow-key { column-gap:17px; row-gap:7px; padding:7px 0; }
+.flow-key>span { display:inline-flex; align-items:center; gap:7px; font:600 .875rem/1.45 var(--heading); }
+.swatch { display:inline-block; height:10px; width:24px; border:2px solid #102334; border-radius:2px; }
+.swatch.energy { background:#ffd15a; }.swatch.signal { background:#c59eff; }.swatch.heat { background:#ff7958; }.swatch.air { background:#55deee; }
+.flow-footnote { color:#4e554f; font:.875rem/1.55 var(--heading); margin:5px 0 0; max-width:78ch; }
+@media (max-width:560px) {
+  .flow-bar { gap:9px; }.flow-tabs button { padding-inline:9px; }
+  .flow-reading { gap:10px; }.flow-page { font-size:2rem; }
+  .flow-transport { gap:5px; }.flow-transport button { font-size:.85rem; padding-inline:7px; }
+  .flow-stage-caption strong { font-size:.875rem; }
+}

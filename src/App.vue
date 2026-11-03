@@ -9,13 +9,17 @@ import BoardScene from './components/BoardScene.vue'
 import DiagnosticPanel from './components/DiagnosticPanel.vue'
 import LessonModal from './components/LessonModal.vue'
 import { getComponents, lessons, glossary, sources } from './data.js'
-import { sequenceFor } from './simulation.js'
+import { sequenceFor, heatSequenceFor } from './flows.js'
+import FlowReadout from './components/FlowReadout.vue'
 import { recognitionFor, illustrationFor } from './recognition.js'
 import { externalParts } from './three/layout.js'
 const modelMode=ref('interior'),flowKind=ref('energy')
 const modelModes=computed(()=>[{id:'equipment',name:'Equipo'},{id:'interior',name:'Interior'},{id:'board',name:'Placa'},{id:'exploded',name:'Despiece'}].filter(m=>device.value==='laptop'||m.id!=='equipment'))
-async function focusPart(){if(modelMode.value==='equipment'||modelMode.value==='exploded'||selected.value==='cpu')modelMode.value=externalParts.includes(selected.value)?'interior':'board';await nextTick();scene.value?.focus()}
-function changeMode(id){modelMode.value=id}
+async function focusPart(){if(flowActive.value)closeFlow();if(modelMode.value==='equipment'||modelMode.value==='exploded'||selected.value==='cpu')modelMode.value=externalParts.includes(selected.value)?'interior':'board';await nextTick();scene.value?.focus()}
+function changeMode(id){
+  if (step.value >= 0 && (id === 'exploded' || id === 'equipment' || (flowKind.value === 'thermal' && id === 'board'))) closeFlow()
+  modelMode.value = id
+}
 
 
 const view=ref('home'),device=ref('laptop'),selected=ref('ram'),infoTab=ref('recognition'),labels=ref(true)
@@ -67,7 +71,13 @@ function restorePage() {
 
 const parts=computed(()=>getComponents(device.value))
 const component=computed(()=>parts.value.find(c=>c.id===selected.value)||parts.value[0])
-const seq=computed(()=>sequenceFor(device.value))
+const stageFrame = ref(null)
+const thermalStep = ref(0)
+const flowSteps = computed(() => flowKind.value === 'thermal' ? heatSequenceFor(device.value) : sequenceFor(device.value))
+const flowIndex = computed(() => flowKind.value === 'thermal' ? thermalStep.value : step.value)
+const flowActive = computed(() => view.value === 'lab' && step.value >= 0)
+const flowStage = computed(() => flowActive.value ? flowSteps.value[flowIndex.value] : null)
+const stageName = computed(() => flowKind.value === 'thermal' ? 'Calor' : 'Encendido')
 const relatedGuide = computed(() => {
   const id = selected.value === 'cpu' || selected.value === 'heatsink' ? 'termica'
     : selected.value === 'fan' ? 'limpieza' : selected.value
@@ -93,24 +103,61 @@ function navigate(id, sub, push = true) {
   stop()
   step.value = -1
   diagnosticPower.value = false
-  const section = id === 'workshop' ? '/' + guideId.value : id === 'fit' ? '/' + fitKind.value : ''
+  flowKind.value = 'energy'
+  const flowLink = id === 'lab' && ['energia','calor'].includes(sub)
+  if (flowLink) openFlow(sub === 'calor' ? 'thermal' : 'energy', false)
+  const section = flowLink ? '/' + sub : id === 'workshop' ? '/' + guideId.value : id === 'fit' ? '/' + fitKind.value : ''
   const nextHash = '#' + id + section
   if (push && window.location.hash !== nextHash) window.history.pushState(null, '', nextHash)
   window.scrollTo(0, 0)
 }
-function selectPart(id){selected.value=id;infoTab.value='recognition';if(modelMode.value==='equipment'||modelMode.value==='board'&&externalParts.includes(id))modelMode.value='interior'}
+function selectPart(id){if(flowActive.value)closeFlow();selected.value=id;infoTab.value='recognition';if(modelMode.value==='equipment'||modelMode.value==='board'&&externalParts.includes(id))modelMode.value='interior'}
 function searchSelect(id){navigate('lab');selectPart(id)}
-function setDevice(value){if(device.value===value)return;stop();step.value=-1;device.value=value;modelMode.value='interior';if(!getComponents(value).some(c=>c.id===selected.value))selected.value='cpu';libraryFilter.value='Todos';save()}
-function stop(){clearInterval(timer);playing.value=false}
-function play(){
-  if(playing.value){stop();return}
-  if(step.value>=5)step.value=-1
-  playing.value=true
-  advance()
-  if(playing.value)timer=setInterval(advance,2600)
+function setDevice(value) {
+  if (device.value === value) return
+  const resumeTour = flowActive.value
+  stop()
+  device.value = value
+  modelMode.value = 'interior'
+  if (resumeTour) openFlow(flowKind.value, false)
+  else if (!getComponents(value).some(c => c.id === selected.value)) selected.value = 'cpu'
+  libraryFilter.value = 'Todos'
+  save()
 }
-function advance(){if(step.value>=5){stop();return}step.value++;selected.value=seq.value[step.value].id;if(step.value===5)stop()}
-function goStep(i){stop();step.value=i;selected.value=seq.value[i].id}
+function stop() { clearInterval(timer); playing.value = false }
+function closeFlow() {
+  stop()
+  step.value = -1
+  thermalStep.value = 0
+  if (view.value === 'lab') window.history.replaceState(null, '', '#lab')
+}
+function openFlow(kind, link = true) {
+  stop()
+  flowKind.value = kind
+  thermalStep.value = 0
+  step.value = kind === 'thermal' ? 5 : 0
+  modelMode.value = kind === 'thermal' ? 'interior' : 'board'
+  selected.value = flowSteps.value[0].id
+  infoTab.value = 'function'
+  nextTick(() => scene.value?.reset())
+  if (link) window.history.replaceState(null, '', kind === 'thermal' ? '#lab/calor' : '#lab/energia')
+}
+function showStage(index) {
+  if (flowKind.value === 'thermal') thermalStep.value = index
+  else step.value = index
+  selected.value = flowSteps.value[index].id
+}
+function goStep(index) { stop(); showStage(index) }
+function play() {
+  if (playing.value) { stop(); return }
+  if (!flowActive.value) openFlow('energy')
+  if (flowIndex.value === flowSteps.value.length-1) showStage(0)
+  playing.value = true
+  timer = setInterval(() => {
+    if (flowIndex.value === flowSteps.value.length-1) stop()
+    else showStage(flowIndex.value+1)
+  }, 4800)
+}
 function completeLesson(id){if(!completed.value.includes(id)){completed.value.push(id);save();notify('Una idea más clara. Lección completada.')}}
 function exploreLesson(lesson){activeLesson.value=null;navigate(['meter','faults','method'].includes(lesson.id)?'diagnostics':'lab');selectPart(lesson.focus);if(lesson.id==='power')play()}
 function solveCase(id){if(!solved.value.includes(id)){solved.value.push(id);save();notify('Caso resuelto. Tu diagnóstico tiene evidencia.')}}
@@ -164,9 +211,23 @@ onBeforeUnmount(()=>{window.removeEventListener('popstate',restorePage);stop();c
           <section class="lab-layout" :class="{'diagnostics-layout':view==='diagnostics'}" aria-label="Laboratorio interactivo">
             <div class="workbench">
               <div class="workbench-header"><div class="device-tabs" role="group" aria-label="Tipo de placa"><button :class="{active:device==='laptop'}" :aria-pressed="device==='laptop'" @click="setDevice('laptop')"><Icon name="Laptop" :size="17" /> Laptop</button><button :class="{active:device==='desktop'}" :aria-pressed="device==='desktop'" @click="setDevice('desktop')"><Icon name="Monitor" :size="17" /> PC de escritorio</button></div><span class="model-badge"><span class="tiny-dot"></span> MODELO 3D</span></div>
-              <div class="anatomy-modes" role="group" aria-label="Vista del modelo"><button v-for="m in modelModes" :key="m.id" :class="{active:modelMode===m.id}" :aria-pressed="modelMode===m.id" @click="changeMode(m.id)">{{ m.name }}</button><span>{{ modelMode==='exploded'?'Conjuntos separados para estudiar':modelMode==='board'?'Refrigeración oculta para inspeccionar':'Explora de fuera hacia dentro' }}</span></div><div class="board-stage"><div class="stage-caption"><span>01 / {{ device==='laptop'?'LAPTOP':'DESKTOP' }}</span><strong>{{ device==='laptop'?'Anatomía de una laptop':'Anatomía de una PC' }}</strong><small>Modelo didáctico · {{ parts.length }} componentes</small></div><div class="stage-coordinates" aria-hidden="true"><span>Y</span><div>↖<span>↑</span>↗</div><span>X &nbsp;&nbsp;&nbsp; Z</span></div><BoardScene ref="scene" :device="device" :selected="selected" :labels="labels" :step="sceneStep" :running="playing" :mode="modelMode" :flow-kind="flowKind" :reduced-motion="reducedMotion" @select="selectPart" /><div class="stage-hint"><Icon name="MousePointer2" :size="13" /><span>Arrastra para girar · Selecciona para descubrir</span></div><div class="scene-tools"><button class="icon-button" @click="scene?.zoom(1)" aria-label="Acercar placa" title="Acercar"><Icon name="Plus" :size="17" /></button><button class="icon-button" @click="scene?.zoom(-1)" aria-label="Alejar placa" title="Alejar"><Icon name="Minus" :size="17" /></button><span></span><button class="icon-button" @click="scene?.rotate()" aria-label="Girar placa 45 grados" title="Girar"><Icon name="Rotate3d" :size="18" /></button><button class="icon-button" @click="scene?.reset()" aria-label="Restablecer vista" title="Restablecer vista"><Icon name="Scan" :size="17" /></button><span></span><button class="icon-button" :class="{active:labels}" :aria-pressed="labels" @click="labels=!labels" aria-label="Mostrar etiquetas" title="Etiquetas"><Icon name="Tags" :size="17" /></button></div><div class="stage-scale" aria-hidden="true">LP / REV 02 <span></span></div></div>
-              <div class="component-picker"><label for="part-picker">INSPECCIONAR</label><select id="part-picker" aria-label="INSPECCIONAR" :value="selected" @change="selectPart($event.target.value)"><option v-for="c in parts" :key="c.id" :value="c.id">{{ c.name }}</option></select><button @click="focusPart"><Icon name="ScanSearch" :size="16" /> Ver de cerca</button></div><div class="workbench-footer"><div class="live-state"><span class="status-dot" :class="{powered:sceneStep>=0}"></span><span>{{ view==='diagnostics'?(diagnosticPower?'Placa alimentada · simulación':'Placa desconectada'):step<0?'Lista para explorar':step===5?'Secuencia completada':playing?'Encendido en curso':'Secuencia en pausa' }}</span></div><button v-if="view==='lab'" class="power-button" @click="play"><Icon :name="playing?'Pause':'Play'" :size="15" />{{ playing?'Pausar':step>=0&&step<5?'Continuar encendido':'Ver encendido' }}<Icon name="ArrowRight" :size="15" /></button><span v-else class="footer-tag">MEDICIONES VIRTUALES</span></div>
-              <div v-if="view==='lab'&&step>=0" class="flow-switch"><button :class="{active:flowKind==='energy'}" @click="flowKind='energy'">Recorrido de energía</button><button :class="{active:flowKind==='thermal'}" @click="flowKind='thermal';modelMode='interior'">Recorrido del calor</button><small>{{ flowKind==='thermal'?(step<3?'Disponible al activar el procesador.':'CPU → contacto térmico → tubos → aletas → aire'):'Conexiones funcionales, no trazado de pistas reales.' }}</small></div><div v-if="view==='lab'&&step>=0" class="sequence-panel"><div class="sequence-steps"><button v-for="(s,i) in seq" :key="s.id" :class="{done:i<step,current:i===step}" @click="goStep(i)"><span>{{ i<step?'✓':String(i+1).padStart(2,'0') }}</span>{{ s.label }}</button></div><p><strong>{{ seq[step].value }}</strong>{{ seq[step].text }}<button @click="stop();step=-1" aria-label="Cerrar secuencia"><Icon name="X" :size="15" /></button></p></div>
+              <div v-if="view==='lab'" class="flow-bar">
+                <div class="flow-bar-heading"><span class="flow-kicker">LÁMINA ANIMADA</span><strong>Recorridos de la placa</strong></div>
+                <div class="flow-tabs" role="group" aria-label="Elegir recorrido">
+                  <button :aria-pressed="flowActive && flowKind==='energy'" @click="openFlow('energy')"><Icon name="Zap" :size="18"/> Encendido</button>
+                  <button :aria-pressed="flowActive && flowKind==='thermal'" @click="openFlow('thermal')"><Icon name="Flame" :size="18"/> Calor</button>
+                </div>
+              </div>
+              <div class="anatomy-modes" role="group" aria-label="Vista del modelo"><button v-for="m in modelModes" :key="m.id" :class="{active:modelMode===m.id}" :aria-pressed="modelMode===m.id" @click="changeMode(m.id)">{{ m.name }}</button><span>{{ modelMode==='exploded'?'Conjuntos separados para estudiar':modelMode==='board'?'Refrigeración oculta para inspeccionar':'Explora de fuera hacia dentro' }}</span></div><div ref="stageFrame" class="board-stage" :class="{'showing-flow':flowActive,'showing-heat':flowActive && flowKind==='thermal'}"><div v-if="flowActive" class="flow-stage-caption"><span>{{ stageName }} · {{ flowIndex+1 }} / {{ flowSteps.length }}</span><strong>{{ flowStage.from }} → {{ flowStage.to }}</strong></div><div v-else class="stage-caption"><span>01 / {{ device==='laptop'?'LAPTOP':'DESKTOP' }}</span><strong>{{ device==='laptop'?'Anatomía de una laptop':'Anatomía de una PC' }}</strong><small>Modelo didáctico · {{ parts.length }} componentes</small></div><div class="stage-coordinates" aria-hidden="true"><span>Y</span><div>↖<span>↑</span>↗</div><span>X &nbsp;&nbsp;&nbsp; Z</span></div><BoardScene ref="scene" :device="device" :selected="selected" :labels="labels" :step="sceneStep" :running="view==='diagnostics' ? diagnosticPower : playing" :mode="modelMode" :flow-kind="view==='diagnostics' ? 'energy' : flowKind" :thermal-step="thermalStep" :guided="flowActive" :reduced-motion="reducedMotion" @select="selectPart" /><div class="stage-hint"><Icon name="MousePointer2" :size="13" /><span>Arrastra para girar · Selecciona para descubrir</span></div><div class="scene-tools"><button class="icon-button" @click="scene?.zoom(1)" aria-label="Acercar placa" title="Acercar"><Icon name="Plus" :size="17" /></button><button class="icon-button" @click="scene?.zoom(-1)" aria-label="Alejar placa" title="Alejar"><Icon name="Minus" :size="17" /></button><span></span><button class="icon-button" @click="scene?.rotate()" aria-label="Girar placa 45 grados" title="Girar"><Icon name="Rotate3d" :size="18" /></button><button class="icon-button" @click="scene?.reset()" aria-label="Restablecer vista" title="Restablecer vista"><Icon name="Scan" :size="17" /></button><span></span><button class="icon-button" :class="{active:labels}" :aria-pressed="labels" @click="labels=!labels" aria-label="Mostrar etiquetas" title="Etiquetas"><Icon name="Tags" :size="17" /></button></div><div class="stage-scale" aria-hidden="true">LP / REV 02 <span></span></div></div>
+              <div class="component-picker"><label for="part-picker">INSPECCIONAR</label><select id="part-picker" aria-label="INSPECCIONAR" :value="selected" @change="selectPart($event.target.value)"><option v-for="c in parts" :key="c.id" :value="c.id">{{ c.name }}</option></select><button @click="focusPart"><Icon name="ScanSearch" :size="16" /> Ver de cerca</button></div><div v-if="view==='diagnostics'" class="workbench-footer"><span class="live-state"><i class="status-dot" :class="{powered:diagnosticPower}"></i>{{ diagnosticPower?'Placa alimentada · simulación':'Placa desconectada' }}</span><span class="footer-tag">MEDICIONES VIRTUALES</span></div>
+              <template v-else>
+                <div class="flow-transport">
+                  <button class="flow-play" @click="play"><Icon :name="playing?'Pause':'Play'" :size="16"/>{{ playing?'Pausar':!flowActive?'Ver encendido':flowIndex===flowSteps.length-1?'Repetir recorrido':'Reproducir' }}</button>
+                  <template v-if="flowActive"><button :disabled="flowIndex===0" @click="goStep(flowIndex-1)" aria-label="Etapa anterior">← Anterior</button><button :disabled="flowIndex===flowSteps.length-1" @click="goStep(flowIndex+1)" aria-label="Etapa siguiente">Siguiente →</button><button class="close-flow" @click="closeFlow" aria-label="Cerrar recorrido"><Icon name="X" :size="18"/></button></template>
+                  <span v-else>Observa el encendido paso a paso sobre la placa.</span>
+                </div>
+                <FlowReadout v-if="flowActive" :steps="flowSteps" :index="flowIndex" :kind="flowKind" @seek="goStep" @locate="stageFrame?.scrollIntoView({block:'center'})"/>
+              </template>
             </div>
 
             <aside v-if="view==='lab'" class="component-panel"><div class="panel-eyebrow"><span class="tiny-dot orange"></span> EXPLORADOR DE COMPONENTES <span>{{ component.ref }}</span></div><div class="component-title"><div class="component-icon"><Icon :name="component.icon" :size="32" /></div><span class="component-category">{{ component.category }}</span></div><h2>{{ component.name }}</h2><p class="component-tagline">{{ component.summary }}</p><div class="info-tabs" role="tablist" aria-label="Información del componente"><button v-for="t in [{id:'recognition',name:'Reconocer'},{id:'function',name:'Función'},{id:'signals',name:'Señales'},{id:'faults',name:'Fallas'}]" :key="t.id" role="tab" :aria-selected="infoTab===t.id" @click="infoTab=t.id" :class="{active:infoTab===t.id}">{{ t.name }}<Icon v-if="t.id==='faults'" name="ArrowUpRight" :size="13" /></button></div><div class="info-content" role="tabpanel"><template v-if="infoTab==='recognition'"><div v-if="illustrationFor(component.id,device)" class="recognition-figure"><img :src="illustrationFor(component.id,device)" :alt="'Ilustración de '+component.name" /><span>FORMA Y ENCAPSULADO · EJEMPLO</span></div><ol class="recognition-clues"><li v-for="clue in recognitionFor(component.id,device)" :key="clue">{{ clue }}</li></ol><button class="inspect-action" @click="focusPart"><Icon name="ScanSearch" :size="16" /> Examinar en la placa <Icon name="ArrowUpRight" :size="16" /></button></template><template v-else-if="infoTab==='function'"><p>{{ component.description }}</p><div class="component-facts"><div><Icon name="MapPin" :size="17" /><span><small>DÓNDE ENCONTRARLO</small>{{ component.location }}</span></div><div><Icon name="Fingerprint" :size="17" /><span><small>CÓMO IDENTIFICARLO</small>Referencia habitual: <strong>{{ component.prefix }}</strong></span></div></div></template><template v-else-if="infoTab==='signals'"><p>{{ component.detail }}</p><div class="signal-card"><span>SEÑALES / LÍNEAS</span><strong>{{ component.signal }}</strong><span>ALIMENTACIÓN</span><p>{{ component.voltage }}</p></div><p class="help-text">Verifica siempre el esquema y la hoja de datos del componente real.</p></template><template v-else><p class="field-label">Síntomas que orientan</p><ul class="symptom-list"><li v-for="symptom in component.symptoms" :key="symptom"><span></span>{{ symptom }}</li></ul><p>{{ component.check }}</p></template><div class="technician-tip"><Icon name="Lightbulb" :size="19" /><div><strong>Piensa como técnico</strong><p>{{ component.tip }}</p></div></div></div><div v-if="relatedGuide" class="linked-procedure"><span class="folio-kicker">FICHA DE SERVICIO / {{ relatedGuide.number }}</span><button class="ink-link" @click="openGuide(relatedGuide.id)">{{ relatedGuide.name }} ↗</button><button v-if="['ram','ssd'].includes(relatedGuide.id)" class="ink-link" @click="openFit(relatedGuide.id)">Revisar compatibilidad ↗</button></div><button class="panel-action" @click="navigate('diagnostics')"><Icon name="ScanSearch" :size="17" /> Llevarlo a la práctica <Icon name="ArrowUpRight" :size="17" /></button></aside>
@@ -187,7 +248,7 @@ onBeforeUnmount(()=>{window.removeEventListener('popstate',restorePage);stop();c
       </main>
     </div>
     <LessonModal v-if="activeLesson" :key="activeLesson.id" :lesson="activeLesson" :completed="completed.includes(activeLesson.id)" @close="activeLesson=null" @complete="completeLesson" @explore="exploreLesson" />
-    <dialog ref="settings" class="settings-dialog"><div class="dialog-content"><button class="icon-button close-dialog" aria-label="Cerrar preferencias" @click="settings.close()"><Icon name="X" /></button><span class="eyebrow">A TU MANERA</span><h2>Tu espacio de trabajo.</h2><div class="setting-row"><span><strong>Reducir movimiento</strong><small>Detiene el movimiento de los indicadores de energía.</small></span><button role="switch" class="switch" :class="{on:reducedMotion}" :aria-checked="reducedMotion" aria-label="Reducir movimiento" @click="reducedMotion=!reducedMotion"><span></span></button></div><div class="setting-row"><span><strong>Progreso local</strong><small>{{ completed.length }} lecciones y {{ solved.length }} casos resueltos.</small></span><button class="text-link" @click="confirmReset=true">Reiniciar</button></div><div v-if="confirmReset" class="reset-confirm"><p>Se borrará el progreso de este navegador.</p><button class="button button-outline" @click="confirmReset=false">Conservar</button><button class="button button-dark" @click="resetProgress">Reiniciar progreso</button></div><p class="help-text">El avance de las guías, las lecciones y los casos se guarda en este navegador.</p></div></dialog>
+    <dialog ref="settings" class="settings-dialog"><div class="dialog-content"><button class="icon-button close-dialog" aria-label="Cerrar preferencias" @click="settings.close()"><Icon name="X" /></button><span class="eyebrow">A TU MANERA</span><h2>Tu espacio de trabajo.</h2><div class="setting-row"><span><strong>Reducir movimiento</strong><small>Mantiene fijas las flechas de los recorridos y evita los desplazamientos animados.</small></span><button role="switch" class="switch" :class="{on:reducedMotion}" :aria-checked="reducedMotion" aria-label="Reducir movimiento" @click="reducedMotion=!reducedMotion"><span></span></button></div><div class="setting-row"><span><strong>Progreso local</strong><small>{{ completed.length }} lecciones y {{ solved.length }} casos resueltos.</small></span><button class="text-link" @click="confirmReset=true">Reiniciar</button></div><div v-if="confirmReset" class="reset-confirm"><p>Se borrará el progreso de este navegador.</p><button class="button button-outline" @click="confirmReset=false">Conservar</button><button class="button button-dark" @click="resetProgress">Reiniciar progreso</button></div><p class="help-text">El avance de las guías, las lecciones y los casos se guarda en este navegador.</p></div></dialog>
     <Transition name="toast"><div v-if="toast" class="toast-message" role="status"><Icon name="CircleCheck" :size="19" />{{ toast }}<button aria-label="Cerrar aviso" @click="toast=''"><Icon name="X" :size="15" /></button></div></Transition>
   </div>
 </template>

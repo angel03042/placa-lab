@@ -11,16 +11,7 @@ export const diagnoses = [
   { id: 'healthy', text: 'Las alimentaciones medidas son correctas' },
 ]
 
-export function sequenceFor(device) {
-  return [
-    { id: 'input', label: device === 'laptop' ? 'Entrada DC' : 'Fuente ATX', value: device === 'laptop' ? '19 V' : '12 V', text: 'La energía llega desde la fuente externa de este modelo.' },
-    { id: 'mosfet', label: 'Protección', value: 'Entrada validada', text: 'La etapa de entrada habilita el paso de energía a la placa.' },
-    { id: device === 'laptop' ? 'ec' : 'bios', label: 'Espera y control', value: '3,3 V / 5 V', text: 'Los circuitos de espera detectan la petición de encendido.' },
-    { id: 'vrm', label: 'Regulación', value: 'VCORE · 1,05 V', text: 'Se habilitan las alimentaciones principales. El valor de VCORE es ilustrativo.' },
-    { id: 'ram', label: 'Memoria', value: 'DDR4 · 1,20 V', text: 'Se alimenta e inicializa la memoria del modelo didáctico.' },
-    { id: 'cpu', label: 'Sistema listo', value: 'POST completo', text: 'Con las condiciones correctas, el firmware continúa hacia el dispositivo de arranque.' },
-  ]
-}
+export { sequenceFor } from './flows.js'
 
 export const testPoints = [
   { id: 'input', name: 'TP1 · Entrada', component: 'input', line: 'VIN' },

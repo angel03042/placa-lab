@@ -29,6 +29,22 @@ function drawing(id){
       pieces.push({kind:'polygon',ring:pts,x:Math.cos(a)*1.6,y:Math.sin(a)*1.6,w:2,d:2,z:.46,h:.3,color:'metal'})
     }
     cyl(0,0,.84,.46,.45,'metal')
+  }else if(id==='axial-fan'){
+    for (const offset of [-2.45,2.15]) {
+      slab(offset,-2.45,.30,4.9,0,.55,'dark')
+      slab(-2.15,offset,4.30,.30,0,.55,'dark')
+    }
+    for (const x of [-2.18,2.18]) for (const y of [-2.18,2.18]) cyl(x,y,.14,.55,.04,'metal')
+    for (let i=0;i<7;i++) {
+      const a=i*Math.PI*2/7
+      const ring=[[.56,a],[1.52,a+.08],[2.12,a+.25],[2.08,a+.66],[1.37,a+.52],[.56,a+.42]].map(([r,t])=>[Math.cos(t)*r,Math.sin(t)*r])
+      pieces.push({kind:'polygon',ring,x:Math.cos(a),y:Math.sin(a),w:1.6,d:1.6,z:.22,h:.21,color:'dark'})
+    }
+    cyl(0,0,.67,.24,.35,'dark');cyl(0,0,.38,.60,.025,'metal')
+  }else if(id==='fin-stack'){
+    slab(0,0,4.5,4,.05,.28,'metal')
+    slab(.62,.45,3.26,3.1,0,.07,'copper')
+    for (let i=0;i<19;i++) slab(.08+i*.234,.05,.065,3.9,.33,2.05,'metal')
   }else if(id==='heatsink'){
     slab(0,0,3,3,0,.3,'copper');for(let i=0;i<23;i++)slab(5+i*.11,-1,.04,4,0,1.1,'metal')
     for(const y of[.7,1.5])slab(1.5,y,5.8,.35,.35,.17,'copper')
@@ -60,5 +76,5 @@ function drawing(id){
   }).join('')
   return figureSvg({width:340,height:180,label:`Encapsulado de ejemplo: ${id}`,body,standalone:'light'})
 }
-for(const id of ['ram','dimm','capacitor','resistor','inductor','fan','heatsink','battery-pack','ssd','bios','mosfet','cpu','fuse','diode'])await writeFile(new URL(`${id}.svg`,output),drawing(id))
-console.log('14 component illustrations generated with Anatomy.')
+for(const id of ['ram','dimm','capacitor','resistor','inductor','fan','axial-fan','heatsink','fin-stack','battery-pack','ssd','bios','mosfet','cpu','fuse','diode'])await writeFile(new URL(`${id}.svg`,output),drawing(id))
+console.log('16 component illustrations generated with Anatomy.')

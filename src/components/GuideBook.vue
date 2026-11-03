@@ -13,15 +13,15 @@ const position = ref(0)
 const step = computed(() => guide.value.steps[position.value])
 const allDone = computed(() => done.value.length === guide.value.steps.length)
 const modeText = computed(() => props.device === 'laptop' ? 'Laptop' : 'PC de escritorio')
-const artwork = computed(() => {
-  if (props.device === 'desktop' && guide.value.part === 'fan') return null
-  return illustrationFor(guide.value.part, props.device)
-})
+const artwork = computed(() => illustrationFor(guide.value.part, props.device))
 const schematic = computed(() => {
   const name = step.value.diagram
   if (!name || (name === 'airflow' && props.device === 'desktop')) return null
   return '/service/' + (name === 'ram' ? 'ram-' + props.device : name) + '.svg'
 })
+
+const enlarged = ref(false)
+watch([step, schematic], () => { enlarged.value = false })
 
 function firstOpen() {
   const index = guide.value.steps.findIndex((_, i) => !done.value.includes(i))
@@ -59,8 +59,9 @@ function restart() {
         <div class="step-hero"><div><span class="step-ordinal">{{ String(position+1).padStart(2,'0') }}</span><h3>{{ step.title }}</h3></div><img v-if="artwork" :src="artwork" :alt="guide.area" /></div>
         <p class="step-prose">{{ step.text }}</p>
         <figure v-if="schematic" class="procedure-figure">
-          <img :src="schematic" :alt="step.caption" />
+          <div class="figure-viewport" :class="{enlarged}" :tabindex="enlarged ? 0 : undefined" :aria-label="enlarged ? 'Lámina ampliada. Desplázate horizontalmente para verla completa.' : undefined"><img :src="schematic" :alt="step.caption" /></div>
           <figcaption>{{ step.caption }}</figcaption>
+          <button class="figure-open" :aria-pressed="enlarged" @click="enlarged=!enlarged">{{ enlarged ? 'Ajustar al ancho' : 'Ampliar lámina' }}</button>
         </figure>
         <div v-if="step[device]" class="device-note"><span class="folio-kicker">{{ modeText }} / EN EL BANCO</span><p>{{ step[device] }}</p></div>
         <div v-if="allDone" class="completed-stamp" role="status"><b>✓ Procedimiento revisado</b><button @click="restart">Volver a practicar</button></div>

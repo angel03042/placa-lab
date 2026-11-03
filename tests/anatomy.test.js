@@ -4,6 +4,29 @@ import { ramSize, fanActive, explodedOffsets } from '../src/three/layout.js'
 import { getComponents } from '../src/data.js'
 import { recognitionFor, illustrationFor, illustratedParts } from '../src/recognition.js'
 import { existsSync } from 'node:fs'
+import { heatSequenceFor, sequenceFor } from '../src/flows.js'
+
+test('guided routes use parts and cooling illustrations from the selected machine', () => {
+  for (const device of ['laptop', 'desktop']) {
+    const ids = new Set(getComponents(device).map(part => part.id))
+    const heat = heatSequenceFor(device)
+    assert.equal(heat.length, 4)
+    assert.equal(sequenceFor(device).length, 6)
+    for (const stage of [...heat, ...sequenceFor(device)]) {
+      assert.ok(ids.has(stage.id))
+      assert.ok(stage.from && stage.to && stage.text)
+    }
+    assert.equal(heat.at(-1).id, 'fan')
+    for (const part of ['fan', 'heatsink']) {
+      const art = illustrationFor(part, device)
+      assert.ok(existsSync(new URL('../public' + art, import.meta.url)))
+      assert.notEqual(illustrationFor(part, 'laptop'), illustrationFor(part, 'desktop'))
+    }
+  }
+  assert.match(sequenceFor('desktop')[0].value, /5VSB/)
+  assert.match(heatSequenceFor('laptop')[1].to, /tubos/i)
+  assert.match(heatSequenceFor('desktop')[1].to, /base/i)
+})
 
 test('SO-DIMM is flat; desktop DIMM is vertical with correct relative length',()=>{
   const [w,h,d]=ramSize('laptop');assert.ok(h<Math.min(w,d)/10);assert.equal(w,3.48);assert.equal(d,1.5)

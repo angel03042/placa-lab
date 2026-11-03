@@ -33,9 +33,15 @@ const clues = {
 }
 export function recognitionFor(id,device){
   if(id==='ram'&&device==='desktop')return ['Módulo DIMM largo instalado perpendicular a la placa.','Chips DRAM en las caras y contactos dorados en el borde inferior.','Los seguros del socket retienen los extremos del módulo.']
+  if(id==='heatsink'&&device==='desktop')return ['Base metálica sujeta sobre la CPU.','Aletas paralelas con canales que dejan pasar el aire.','El ventilador axial se fija sobre el bloque de este modelo.']
   if(id==='fan'&&device==='desktop')return ['Ventilador axial sobre las aletas del disipador.','Aspas anchas alrededor de un motor central.','Marco y tornillos sujetan el conjunto al disipador.']
   if(id==='input'&&device==='desktop')return ['Conector ATX rectangular de dos filas.','Cavidades con llaves y un seguro de retención.','Confirma el pinout y el conector específico en el manual.']
   return clues[id]||[]
 }
 export const illustratedParts=['ram','capacitor','resistor','inductor','fan','heatsink','battery-pack','ssd','bios','mosfet','cpu','fuse','diode']
-export const illustrationFor=(id,device)=>illustratedParts.includes(id)?`/components/${id==='ram'&&device==='desktop'?'dimm':id}.svg`:null
+const desktopArt = { ram:'dimm', fan:'axial-fan', heatsink:'fin-stack' }
+export function illustrationFor(id, device) {
+  if (!illustratedParts.includes(id)) return null
+  const asset = (device === 'desktop' && desktopArt[id]) || id
+  return '/components/' + asset + '.svg'
+}

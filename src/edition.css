@@ -201,3 +201,65 @@
   .guide-resources{grid-template-columns:1fr}.form-fields{grid-template-columns:1fr}.form-sheet{padding:13px}.step-hero{gap:8px}.fit-toolbar label{display:grid;gap:5px;width:100%}.fit-toolbar select{width:100%}.step-actions{gap:10px}.step-actions .print-button{font-size:12px;padding:11px}.cover-copy h1{font-size:65px}
 }
 
+/* Body copy, controls and printed annotations share a readable type scale. */
+.print-edition { --quiet:#464e4d; }
+.print-edition :is(.folio-kicker,.specimen-number,.folio-count,.edition-line,.reader-running,.reader-progress,.plate-metadata,.blue-plate figcaption,.procedure-figure figcaption,.footer-tag,.lesson-num,.eyebrow,.page-footer,.page-footer>span:first-child) { font-size:.75rem; line-height:1.45; letter-spacing:.055em; }
+.print-edition :is(.press-nav button,.index-trigger,.ink-link,.print-button,.guide-tabs button,.type-switch button,.fit-toolbar label,.guide-resources a,.guide-resources li,.index-title+p,.field-hint,.step-actions .print-button,.form-fields label,.form-sheet .technical-note,.model-help p,.confirm-field,.fit-result p,.guide-resources .ink-link) { font-size:.94rem; line-height:1.5; }
+.print-edition :is(.step-prose,.device-note p,.cover-copy p,.folio-intro>p,.page-heading p,.info-content>p,.component-tagline,.recognition-clues li,.technician-tip p,.glossary-grid p,.lesson-card p,.library-card p,.reference-section p,.dialog-content .lesson-body) { font-size:1rem; line-height:1.6; }
+.print-edition :is(.fit-sheet select,.fit-sheet input:not([type="checkbox"]),.index-search input,.component-picker select,.diagnostic-panel select,.glossary-search input) { font-size:1rem; }
+.print-edition :is(.fit-result li small,.reader-index li button span,.guide-tabs button span,.fit-result li p,.form-fields input::placeholder) { font-size:.85rem; }
+.print-edition :is(.stage-caption>span,.stage-caption>small,.anatomy-modes>span,.component-picker label,.stage-hint,.model-badge,.panel-eyebrow,.diagnostic-panel .panel-eyebrow,.recognition-figure>span,.component-facts small,.signal-card>span,.library-card-art>span,.component-panel .component-category,.library-card .eyebrow) { color:#424c52; font-size:.75rem; line-height:1.4; }
+.print-edition .panel-eyebrow>span:last-child { color:#374956; font-size:.8rem; }
+.print-edition .stage-caption { background:#fffdf5; }
+.print-edition .stage-caption strong { color:var(--carbon); font-size:1rem; }
+.print-edition .stage-hint { background:#fffdf5; padding:3px 5px; }
+.print-edition .board-label { transform:none; padding:0; gap:3px; background:transparent; box-shadow:none; font-size:.8rem; line-height:1.35; color:#203748; }
+.print-edition .board-label>span:last-child { background:#fffdf5; border-color:#73808a; border-radius:2px; padding:3px 6px; }
+.print-edition .board-label.selected>span:last-child { background:#273e53; border-color:white; color:white; }
+.print-edition .scene-tools .icon-button { width:clamp(34px,3vw,43px); height:clamp(34px,3vw,43px); color:#2e4250; }
+.print-edition :is(.device-tabs button,.anatomy-modes button,.info-tabs button,.filter-tabs button,.panel-action,.text-link,.library-card-link,.lesson-card-bottom,.inspect-action,.component-picker button,.button,.quiz-option,.field-label,.bench-note button,.diagnostic-guidance>span) { font-size:.875rem; line-height:1.45; }
+.print-edition :is(.device-tabs button:not(.active),.anatomy-modes button:not(.active),.filter-tabs button:not(.active),.info-tabs button,.text-link,.panel-action,.library-card-link,.lesson-card-bottom,.field-label,.bench-note button,.quiz-option) { color:#354b51; }
+.print-edition .info-tabs button.active { color:#173953; border-bottom-color:#203b52; font-weight:700; }
+.print-edition .info-tabs { flex-wrap:wrap; }
+.print-edition .board-stage { overflow:hidden; }
+.print-edition :is(.lesson-strip-name,.component-facts>div>span,.signal-card>strong,.technician-tip strong,.symptom-list li,.route-banner p,.setting-row small,.source-links a,.lesson-status,.case-description,.reading-history summary,.reading-history li,.reading-history li strong,.meter-modes button,.feedback,.measurement-note,.power-toggle>span,.help-text,.empty-small,.bench-note) { font-size:.9rem; line-height:1.5; }
+.print-edition :is(.reading-history,.reading-history li strong,.signal-card>strong,.help-text,.empty-small,.power-toggle>span,.meter-top,.diagnostic-panel .field-label,.case-description,.measurement-note,.diagnostic-guidance>span,.setting-row small,.lesson-status,.lesson-strip-name small,.lesson-card .eyebrow) { color:#414e48; }
+.print-edition :is(.reading-history li small,.reading-history summary>span,.meter-display small,.meter-top>span:first-child,.live-state,.lesson-strip-name small,.lesson-card .eyebrow,.library-toolbar>span,.section-heading .eyebrow,.setting-row .text-link) { font-size:.8rem; }
+.print-edition .reading-history li small { background:#e4eadd; color:#2e422f; padding:1px 4px; }
+.print-edition .meter-display, .print-edition .meter-display small { color:#34472d; }
+.print-edition .meter-modes button { color:#3b5134; border-color:#87967c; }
+.print-edition .meter-modes button.active { color:white; background:#374e37; border-color:#374e37; }
+.print-edition .meter select, .print-edition .diagnostic-panel>select { min-width:0; max-width:100%; }
+.print-edition :is(.measurement-note.warning,.feedback.incorrect,.quiz-option.wrong) { background:#faf1df; color:#724716; }
+.print-edition :is(.feedback.correct,.quiz-option.right) { background:#ecf3e5; color:#2a5430; }
+.print-edition .route-banner :is(.eyebrow,p) { color:#d5e3e9; }
+.print-edition .library-card-art>svg { color:#425360; }
+.print-edition .library-card h3 { min-height:0; font-size:clamp(1.1rem,2vw,1.5rem); }
+.print-edition .library-card p { min-height:0; }
+.print-edition .bench-note { flex-wrap:wrap; }
+.print-edition .bench-note>span { flex:1 1 230px; }
+.print-edition :focus-visible { outline-color:#1765a6; }
+.print-edition :is(.flow-bar,.fit-result,.blue-plate,.route-banner) :focus-visible { outline-color:#ffe3a3; }
+.figure-open { font:600 .875rem/1.5 var(--heading); color:#253e5a; text-decoration:underline; text-underline-offset:3px; }
+.plate-key { display:flex; flex-wrap:wrap; gap:4px 15px; margin:0 16px 10px; font:.8rem/1.5 var(--mono); color:#f7eedf; }
+.plate-key b { color:#ffc197; }
+@media (max-width:720px) {
+  .print-edition .stage-coordinates { display:none; }
+  .print-edition .workbench-header,.print-edition .anatomy-modes,.print-edition .workbench-footer,.print-edition .component-picker { flex-wrap:wrap; height:auto; gap:7px; }
+  .print-edition .page-footer { flex-wrap:wrap; }
+  .print-edition .blue-plate figcaption,.print-edition .plate-metadata { letter-spacing:.02em; }
+}
+@media (max-width:460px) {
+  .print-edition .library-card p,.print-edition .procedure-index p { font-size:.94rem; line-height:1.5; }
+  .print-edition .model-badge { display:none; }
+  .print-edition .anatomy-modes button { padding-inline:4px; }
+  .print-edition .section-heading { flex-wrap:wrap; gap:8px; }
+  .print-edition .diagnostic-panel { padding:16px; }
+}
+
+
+.cover-routes { display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; background:#e8eced; border-left:4px solid var(--blueprint); padding:12px 16px; margin-bottom:22px; }
+.cover-routes button { display:inline-flex; align-items:center; gap:6px; padding:5px 0; color:#243d58; font-size:1rem; font-weight:650; text-decoration:underline; text-underline-offset:4px; }
+.figure-viewport { max-width:100%; overflow-x:auto; }
+.figure-viewport.enlarged img { min-width:880px; }
+.figure-open { margin-top:7px; }
