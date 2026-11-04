@@ -1,6 +1,6 @@
 # Placa Lab
 
-Laboratorio educativo en español para identificar componentes de laptops y PC, comprender su funcionamiento y practicar diagnóstico con mediciones simuladas.
+Laboratorio educativo en español para aprender a reparar laptops y reconocer los componentes de una PC. En **Turno de taller** puedes tomar tres órdenes de servicio: una laptop sin señales de encendido, una que enciende sin imagen y otra que se apaga bajo carga. Cada orden incluye diagnóstico, intervención y prueba funcional. El progreso se guarda en el navegador.
 
 ## Ejecutar
 
@@ -20,6 +20,8 @@ npm run preview
 ```
 
 El sitio es estático y el resultado está en `dist/`. Es compatible con Vercel, Netlify, Cloudflare Pages o un servidor de archivos estáticos. La configuración de Sites está en `.openai/hosting.json`.
+
+Para desplegar desde GitHub en Vercel, importa el repositorio con el preset **Vite**, la raíz del repositorio como directorio de proyecto, `npm run build` como comando y `dist` como salida. El taller está disponible en `/#turno` y no requiere variables de entorno.
 
 ## Qué incluye
 

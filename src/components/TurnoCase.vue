@@ -2,15 +2,17 @@
 import { computed, ref, watch, nextTick } from 'vue'
 import BoardScene from './BoardScene.vue'
 import CaseReplay from './CaseReplay.vue'
+import PowerStation from './PowerStation.vue'
+import BootDisplay from './BootDisplay.vue'
 import Icon from './Icon.vue'
 import { testPoints } from '../simulation.js'
 import { interview, inspections, conclusions, followUps, newTicket, benchReading, pointName, readingKey, reportFeedback } from '../game/turno.js'
 
 defineProps({ reducedMotion:Boolean })
 const ticket = defineModel({ required:true })
-const emit = defineEmits(['solve','reference'])
-const phases = ['intake','bench','report','closed']
-const phaseLabels = ['Recepción','Banco','Informe','Cierre']
+const emit = defineEmits(['solve','reference','menu'])
+const phases = ['intake','bench','report','repair','closed']
+const phaseLabels = ['Recepción','Medición','Diagnóstico','Reparación','Entrega']
 const section = ref(null)
 const scene = ref(null)
 const hints = ref(0)
@@ -64,8 +66,9 @@ function evidence(key) {
 }
 function submit() {
   feedback.value = reportFeedback(ticket.value)
-  if (!feedback.value) { patch({ phase:'closed' }); emit('solve','no-power') }
+  if (!feedback.value) patch({ phase:'repair' })
 }
+function deliver() { patch({ phase:'closed' }); emit('solve','no-power') }
 function restart() {
   ticket.value = newTicket()
   lastReply.value = ''; inspection.value = ''; hints.value = 0
@@ -73,9 +76,10 @@ function restart() {
 </script>
 <template>
   <section ref="section" tabindex="-1" class="turno" aria-label="Turno de taller">
+    <button class="case-link" @click="emit('menu')">← Órdenes del taller</button>
     <header class="order-header">
       <div><span class="ticket-kicker"><i></i> TURNO DE TALLER / NIVEL INICIAL</span><h1>Una laptop <em>sin señales.</em></h1></div>
-      <div class="order-tag"><small>ORDEN DE SERVICIO</small><strong>№ 001</strong><span>{{ ticket.phase==='closed'?'CASO RESUELTO':'DIAGNÓSTICO' }}</span></div>
+      <div class="order-tag"><small>ORDEN DE SERVICIO</small><strong>№ 001</strong><span>{{ ticket.phase==='closed'?'EQUIPO ENTREGADO':ticket.phase==='repair'?'EN REPARACIÓN':'DIAGNÓSTICO' }}</span></div>
     </header>
     <ol class="order-progress" aria-label="Etapas del turno"><li v-for="(label,i) in phaseLabels" :key="label" :aria-current="i===stageNumber?'step':undefined" :class="{past:i<stageNumber}"><span>{{ i<stageNumber?'✓':String(i+1).padStart(2,'0') }}</span> {{ label }}</li></ol>
 
@@ -83,12 +87,12 @@ function restart() {
       <article class="intake-card"><span class="ticket-kicker">RECEPCIÓN · LAPTOP CON ENTRADA DC</span>
         <h2>Escucha al cliente.</h2>
         <blockquote>«Ayer funcionaba. Hoy conecto el cargador y ni siquiera prende la luz».</blockquote>
-        <p>Tu encargo es encontrar en qué etapa se interrumpe el encendido y explicarlo con dos lecturas. Puedes empezar haciendo una pregunta.</p>
+        <p>Localiza el corte con el multímetro, confirma la pieza averiada bajo el microscopio y devuelve la laptop encendida. Puedes empezar haciendo una pregunta.</p>
         <div class="interview-list"><button v-for="item in interview" :key="item.id" @click="ask(item)"><span aria-hidden="true">{{ ticket.asked.includes(item.id)?'✓':'?' }}</span>{{ item.question }}</button></div>
         <p v-if="lastReply" class="case-answer" role="status">«{{ lastReply }}»</p>
         <button class="ticket-btn primary" @click="changePhase('bench')">Aceptar el equipo <Icon name="ArrowRight" :size="17"/></button>
       </article>
-      <aside class="incoming-machine"><div><span class="ticket-kicker">EQUIPO RECIBIDO</span><span>01 / 01</span></div><img src="/turno-recepcion.svg" alt="Laptop apagada, adaptador de corriente y multímetro sobre la mesa de recepción."/><p>Tiempo orientativo de 5 minutos. Puedes volver a tu orden y continuar en este navegador.</p></aside>
+      <aside class="incoming-machine"><div><span class="ticket-kicker">EQUIPO RECIBIDO</span><span>ORDEN 001</span></div><img src="/turno-recepcion.svg" alt="Laptop apagada, adaptador de corriente y multímetro sobre la mesa de recepción."/><p>La orden se guarda en este navegador. Puedes dejar las herramientas y volver al mismo punto.</p></aside>
     </div>
 
     <template v-else-if="ticket.phase==='bench'">
@@ -131,12 +135,15 @@ function restart() {
       <fieldset><legend>03 · ¿Qué comprobarías después?</legend><label v-for="item in followUps" :key="item.id"><input type="radio" name="followup" :checked="ticket.followUp===item.id" @change="patch({followUp:item.id});feedback=''"/>{{ item.label }}</label></fieldset>
       <label class="note-field">Nota para el cliente (opcional)<textarea maxlength="400" rows="2" :value="ticket.note" @input="patch({note:$event.target.value})" placeholder="Explica con tus palabras lo que encontraste."></textarea></label>
       <p v-if="feedback" class="case-answer" role="status">{{ feedback }}</p>
-      <div class="report-actions"><button type="button" class="case-link" @click="changePhase('bench')">← Volver a medir</button><button class="ticket-btn primary" type="submit">Entregar diagnóstico <Icon name="ArrowRight" :size="16"/></button></div>
+      <div class="report-actions"><button type="button" class="case-link" @click="changePhase('bench')">← Volver a medir</button><button class="ticket-btn primary" type="submit">Validar y pasar al microscopio <Icon name="ArrowRight" :size="16"/></button></div>
     </form>
 
+    <PowerStation v-else-if="ticket.phase==='repair'" :model-value="ticket.repairEvents" @update:model-value="events=>patch({repairEvents:events})" @deliver="deliver"/>
     <template v-else>
-      <article class="order-closed"><span class="ticket-kicker">✓ ORDEN CERRADA / 001</span><h2>Localizaste el corte.</h2><p>Registraste <b>19,00 V en TP1</b> y <b>0,00 V en TP2</b> con el adaptador conectado. Eso sitúa la falla en el camino de entrada. La siguiente prueba es comprobar qué orden reciben los MOSFET.</p><blockquote v-if="ticket.note">«{{ ticket.note }}»</blockquote></article>
-      <CaseReplay :reduced-motion="reducedMotion"/>
+      <article class="order-closed"><span class="ticket-kicker">✓ EQUIPO ENTREGADO / 001</span><h2>La laptop volvió a encender.</h2><p>Confirmaste que PR1 estaba abierta fuera del circuito y soldaste el repuesto. Con el mismo adaptador, <b>TP2 pasó de 0,00 V a 19,00 V</b>. El equipo completó la autoprueba de arranque.</p><blockquote v-if="ticket.note">«{{ ticket.note }}»</blockquote></article>
+      <BootDisplay on :lines="['POST correcto','Orden 001 · equipo verificado']"/>
+      <button class="ticket-btn dark" @click="emit('menu')">Elegir otro reto ↗</button>
+      <details class="delivery-replay"><summary>Comparar la falla original con la secuencia de una placa sana</summary><CaseReplay :reduced-motion="reducedMotion"/></details>
       <button class="case-link retry-case" @click="restart">Practicar de nuevo con una orden en blanco ↗</button>
     </template>
   </section>

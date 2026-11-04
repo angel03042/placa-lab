@@ -4,5 +4,6 @@ import './style.css'
 import './edition.css'
 import './flow.css'
 import './turno.css'
+import './repair.css'
 
 createApp(App).mount('#app')

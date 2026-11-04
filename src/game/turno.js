@@ -1,4 +1,5 @@
 import { measure, canDiagnose, testPoints } from '../simulation.js'
+import { restoreRepair } from './powerRepair.js'
 
 export const interview = [
   { id: 'change', question: '¿Cuándo dejó de encender?', reply: 'Ayer trabajé con ella y la apagué como siempre. Esta mañana ya no reaccionó.' },
@@ -22,7 +23,7 @@ export const followUps = [
 ]
 
 export function newTicket() {
-  return { phase:'intake', asked:[], inspected:[], readings:[], grounded:false, powered:false, redPoint:'', evidence:[], conclusion:'', followUp:'', note:'' }
+  return { phase:'intake', asked:[], inspected:[], readings:[], grounded:false, powered:false, redPoint:'', evidence:[], conclusion:'', followUp:'', note:'', repairEvents:[] }
 }
 const hasPoint = id => testPoints.some(point => point.id === id)
 export const pointName = id => testPoints.find(point => point.id === id)?.name || ''
@@ -42,7 +43,7 @@ export function reportFeedback(ticket) {
 }
 export function restoreTicket(raw) {
   const ticket = newTicket()
-  if (!raw || !['intake','bench','report','closed'].includes(raw.phase)) return ticket
+  if (!raw || !['intake','bench','report','repair','closed'].includes(raw.phase)) return ticket
   const known = (items, options) => options.filter(option => Array.isArray(items) && items.includes(option.id)).map(option => option.id)
   ticket.phase = raw.phase
   ticket.asked = known(raw.asked, interview)
@@ -62,7 +63,14 @@ export function restoreTicket(raw) {
   ticket.conclusion = conclusions.some(option => option.id === raw.conclusion) ? raw.conclusion : ''
   ticket.followUp = followUps.some(option => option.id === raw.followUp) ? raw.followUp : ''
   ticket.note = typeof raw.note === 'string' ? raw.note.slice(0,400) : ''
-  if (ticket.phase === 'closed' && reportFeedback(ticket)) ticket.phase = 'report'
+  if (['repair','closed'].includes(ticket.phase)) {
+    if (reportFeedback(ticket)) ticket.phase = 'report'
+    else {
+      const repair = restoreRepair(raw.repairEvents)
+      ticket.repairEvents = repair.events
+      if (ticket.phase === 'closed' && !repair.booted) ticket.phase = 'repair'
+    }
+  }
   return ticket
 }
 
