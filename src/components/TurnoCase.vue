@@ -1,4 +1,5 @@
 <script setup>
+import OrderProgress from './OrderProgress.vue'
 import { computed, ref, watch, nextTick } from 'vue'
 import BoardScene from './BoardScene.vue'
 import CaseReplay from './CaseReplay.vue'
@@ -81,7 +82,7 @@ function restart() {
       <div><span class="ticket-kicker"><i></i> TURNO DE TALLER / NIVEL INICIAL</span><h1>Una laptop <em>sin señales.</em></h1></div>
       <div class="order-tag"><small>ORDEN DE SERVICIO</small><strong>№ 001</strong><span>{{ ticket.phase==='closed'?'EQUIPO ENTREGADO':ticket.phase==='repair'?'EN REPARACIÓN':'DIAGNÓSTICO' }}</span></div>
     </header>
-    <ol class="order-progress" aria-label="Etapas del turno"><li v-for="(label,i) in phaseLabels" :key="label" :aria-current="i===stageNumber?'step':undefined" :class="{past:i<stageNumber}"><span>{{ i<stageNumber?'✓':String(i+1).padStart(2,'0') }}</span> {{ label }}</li></ol>
+    <OrderProgress :labels="phaseLabels" :step="stageNumber" :digits="2"/>
 
     <div v-if="ticket.phase==='intake'" class="order-intake">
       <article class="intake-card"><span class="ticket-kicker">RECEPCIÓN · LAPTOP CON ENTRADA DC</span>

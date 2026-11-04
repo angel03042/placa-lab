@@ -1,4 +1,5 @@
 <script setup>
+import OrderProgress from './OrderProgress.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import BootDisplay from './BootDisplay.vue'
 import Icon from './Icon.vue'
@@ -47,9 +48,7 @@ watch([() => props.id, () => job.value.phase], async () => {
   <section class="turno service-case" :aria-label="'Orden de servicio '+order.number">
     <button class="case-link" @click="$emit('menu')">← Volver a las órdenes</button>
     <header class="order-header"><div><span class="ticket-kicker"><i></i> ORDEN {{ order.number }} / {{ order.specialty.toUpperCase() }}</span><h1 ref="heading" tabindex="-1">{{ order.title }}</h1></div></header>
-    <ol class="order-progress svc-progress" aria-label="Etapas del servicio">
-      <li v-for="(name,index) in phaseNames" :key="name" :class="{past:index<phaseIndex}" :aria-current="index===phaseIndex?'step':undefined"><span>{{ index<phaseIndex?'✓':index+1 }}</span> {{name}}</li>
-    </ol>
+    <OrderProgress :labels="phaseNames" :step="phaseIndex" class="svc-progress" aria-label="Etapas del servicio"/>
     <div v-if="job.phase==='intake'" class="order-intake">
       <article class="intake-card">
         <span class="ticket-kicker">DECLARACIÓN DEL CLIENTE</span><h2>Un equipo en recepción.</h2>

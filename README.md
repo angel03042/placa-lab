@@ -1,6 +1,6 @@
 # Placa Lab
 
-Laboratorio educativo en español para aprender a reparar laptops y reconocer los componentes de una PC. En **Turno de taller** puedes tomar tres órdenes de servicio: una laptop sin señales de encendido, una que enciende sin imagen y otra que se apaga bajo carga. Cada orden incluye diagnóstico, intervención y prueba funcional. El progreso se guarda en el navegador.
+Laboratorio educativo en español para aprender a reparar laptops y reconocer los componentes de una PC. En **Turno de taller** puedes tomar cuatro órdenes de servicio: una laptop sin señales de encendido, una que enciende sin imagen, una que se apaga bajo carga y una que pierde la carga al mover la clavija. Cada orden incluye diagnóstico, intervención y prueba funcional. El progreso se guarda en el navegador.
 
 ## Ejecutar
 
@@ -29,7 +29,7 @@ Para desplegar desde GitHub en Vercel, importa el repositorio con el preset **Vi
 - Modelos 3D propios generados con Three.js: 19 tipos de componente en laptop y 18 en PC, rotación, zoom, selección y acercamiento por pieza.
 - Laptop con carcasa, teclado y pantalla; vistas Equipo, Interior, Placa y Despiece. La PC ofrece Interior, Placa y Despiece.
 - SO-DIMM horizontal con contactos, muesca y clips; DIMM de escritorio vertical; SSD M.2, turbina o ventilador axial, batería, placa térmica, tubos, aletas, resistencias, bobinas, MLCC, capacitores de polímero, fusible y diodo.
-- Fichas con reconocimiento por forma y encapsulado, función, señales, ubicación, síntomas y criterios de diagnóstico. Catorce ilustraciones generadas con el kit de Anatomy.
+- Fichas con reconocimiento por forma y encapsulado, función, señales, ubicación, síntomas y criterios de diagnóstico. Las ilustraciones de reconocimiento se generan con el kit de Anatomy.
 - Secuencia conceptual de encendido con reproducción, pausa y selección manual de etapas.
 - Recorridos visuales de energía y calor. Giro del ventilador deliberadamente lento, sin asignar RPM; no es una simulación térmica numérica.
 - Multímetro virtual de tensión y resistencia, registro de mediciones y comprobación de hipótesis.
@@ -40,6 +40,7 @@ Para desplegar desde GitHub en Vercel, importa el repositorio con el preset **Vi
 ## Archivos principales
 
 - `src/App.vue`: navegación, laboratorio y vistas de aprendizaje.
+- `src/game/orders.js`: catálogo de órdenes de taller y compatibilidad con el progreso guardado.
 - `src/components/BoardScene.vue`: cámara, controles, selección, estados y animación temporal.
 - `src/three/model.js`, `parts.js`, `layout.js`: conjuntos físicos, primitivas y disposición.
 - `src/recognition.js`: pistas visuales y catálogo ampliado.

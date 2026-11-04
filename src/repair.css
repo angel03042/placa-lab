@@ -5,9 +5,9 @@
 .desk-counter { border:1px solid #a7afa5; box-shadow:3px 3px #d4d2c4; padding:9px 14px; background:#fffdf4; display:grid; text-align:center; }
 .desk-counter span,.job-ticket-top,.job-copy small,.power-badge { font:700 .8rem/1.4 var(--mono); letter-spacing:.04em; }
 .desk-counter strong { text-align:center; color:#254637; font:650 2.5rem/1.2 var(--mono); }.desk-counter i { font-size:1.15rem; font-style:normal; color:#59645c; }
-.job-tickets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:clamp(12px,2vw,25px); margin-top:clamp(18px,3vw,35px); }
+.job-tickets { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:clamp(12px,2vw,25px); margin-top:clamp(18px,3vw,35px); }
 .job-ticket { --ink:#263d4e; --wash:#dce3df; display:flex; flex-flow:column; background:#fffdf3; color:var(--ink); text-decoration:none; border:1px solid #a3aaa1; border-top:5px solid var(--ink); box-shadow:3px 4px #d7d5c7; }
-.ticket-memory { --ink:#375a49; --wash:#dbe8d9; }.ticket-cooling { --ink:#88422a; --wash:#f3e2ce; }
+.ticket-jack { --ink:#225c5c; --wash:#d8e9e3; }.ticket-memory { --ink:#375a49; --wash:#dbe8d9; }.ticket-cooling { --ink:#88422a; --wash:#f3e2ce; }
 .job-ticket:focus-visible,.job-ticket:hover { outline:2px solid var(--ink); outline-offset:2px; }
 .job-ticket-top,.job-ticket-bottom { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; gap:7px; }
 .job-stamp { color:#384c52; border:1px solid #8b9c9a; padding:3px 7px; font:600 .78rem/1.35 var(--heading); }.job-stamp.done { color:#215737; background:#e0ecd7; border-color:#648869; }

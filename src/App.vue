@@ -2,11 +2,11 @@
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import Icon from './components/Icon.vue'
 import WorkshopCover from './components/WorkshopCover.vue'
+import JackChallenge from './components/JackChallenge.vue'
+import { orders, orderStatus, restoreOrders, saveOrders } from './game/orders.js'
 import OrderDesk from './components/OrderDesk.vue'
 import ServiceChallenge from './components/ServiceChallenge.vue'
-import { newServiceJob, restoreServiceJob } from './game/serviceChallenges.js'
 import TurnoCase from './components/TurnoCase.vue'
-import { newTicket, restoreTicket } from './game/turno.js'
 import GuideBook from './components/GuideBook.vue'
 import FitBench from './components/FitBench.vue'
 import { guides } from './workshop/guides.js'
@@ -39,15 +39,17 @@ const nav = [
   {id:'library',name:'Componentes'}, {id:'diagnostics',name:'Diagnóstico'},
   {id:'lessons',name:'Ruta de aprendizaje'}, {id:'glossary',name:'Glosario técnico'},
 ]
-const ticket = ref(newTicket())
-const orderId = ref('')
-const blankJobs = () => ({ memory:newServiceJob('memory'), cooling:newServiceJob('cooling') })
-const serviceJobs = ref(blankJobs())
-const serviceId = computed(() => orderId.value === '002' ? 'memory' : 'cooling')
-function openOrder(id) { navigate('turno',id) }
-function saveJob(job) { serviceJobs.value = {...serviceJobs.value,[serviceId.value]:job} }
-const deliveredOrders = computed(() => Number(ticket.value.phase === 'closed') +
-  Object.values(serviceJobs.value).filter(job => job.phase === 'delivered').length)
+const jobs = ref(restoreOrders())
+const activeOrder = ref(null)
+const activeJob = computed({
+  get: () => activeOrder.value && jobs.value[activeOrder.value.key],
+  set: job => { jobs.value = {...jobs.value, [activeOrder.value.key]:job} },
+})
+const orderCards = computed(() => orders.map(order => ({
+  ...order, status:orderStatus(jobs.value[order.key]),
+})))
+const deliveredOrders = computed(() => orderCards.value.filter(card => card.status === 'Entregada').length)
+function openOrder(id) { navigate('turno', id) }
 const readingForCase = ref(false)
 function consultPower() {
   setDevice('laptop')
@@ -113,9 +115,17 @@ const matchingTerms=computed(()=>glossary.filter(([term,definition])=>`${term} $
 const sceneStep=computed(()=>view.value==='diagnostics'?(diagnosticPower.value?(diagnosticCase.value==='no-power'?0:diagnosticCase.value==='no-display'?3:5):-1):step.value)
 
 function notify(message){toast.value=message;clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.value='',4800)}
-function save(){try{localStorage.setItem('placa-lab:v1',JSON.stringify({completed:completed.value,solved:solved.value,reducedMotion:reducedMotion.value,guideRecords:guideRecords.value,device:device.value,ticket:ticket.value,serviceJobs:serviceJobs.value}))}catch{storageAvailable.value=false}}
+function save() {
+  try {
+    const progress = {
+      completed:completed.value, solved:solved.value, reducedMotion:reducedMotion.value,
+      guideRecords:guideRecords.value, device:device.value, ...saveOrders(jobs.value),
+    }
+    localStorage.setItem('placa-lab:v1', JSON.stringify(progress))
+  } catch { storageAvailable.value = false }
+}
 function navigate(id, sub, push = true) {
-  if (id === 'turno') orderId.value = ['001','002','003'].includes(sub) ? sub : ''
+  if (id === 'turno') activeOrder.value = orders.find(order => order.id === sub) ?? null
   if (id === 'workshop' && guides.some(g => g.id === sub)) guideId.value = sub
   if (id === 'fit' && ['ram','ssd'].includes(sub)) fitKind.value = sub
   view.value = id
@@ -128,7 +138,7 @@ function navigate(id, sub, push = true) {
   flowKind.value = 'energy'
   const flowLink = id === 'lab' && ['energia','calor'].includes(sub)
   if (flowLink) openFlow(sub === 'calor' ? 'thermal' : 'energy', false)
-  const section = id === 'turno' && orderId.value ? '/' + orderId.value : flowLink ? '/' + sub : id === 'workshop' ? '/' + guideId.value : id === 'fit' ? '/' + fitKind.value : ''
+  const section = id === 'turno' && activeOrder.value ? '/' + activeOrder.value.id : flowLink ? '/' + sub : id === 'workshop' ? '/' + guideId.value : id === 'fit' ? '/' + fitKind.value : ''
   const nextHash = '#' + id + section
   if (push && window.location.hash !== nextHash) window.history.pushState(null, '', nextHash)
   window.scrollTo(0, 0)
@@ -183,11 +193,19 @@ function play() {
 function completeLesson(id){if(!completed.value.includes(id)){completed.value.push(id);save();notify('Una idea más clara. Lección completada.')}}
 function exploreLesson(lesson){activeLesson.value=null;navigate(['meter','faults','method'].includes(lesson.id)?'diagnostics':'lab');selectPart(lesson.focus);if(lesson.id==='power')play()}
 function solveCase(id){if(!solved.value.includes(id)){solved.value.push(id);save();notify('Caso resuelto. Tu diagnóstico tiene evidencia.')}}
-function resetProgress(){ticket.value=newTicket();serviceJobs.value=blankJobs();completed.value=[];solved.value=[];guideRecords.value={};save();confirmReset.value=false;notify('Tu progreso se ha reiniciado.')}
+function resetProgress(){jobs.value=restoreOrders();completed.value=[];solved.value=[];guideRecords.value={};save();confirmReset.value=false;notify('Tu progreso se ha reiniciado.')}
 function keydown(e){if(e.key==='/'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&!document.querySelector('dialog[open]')){e.preventDefault();mobileMenu.value=true;nextTick(()=>searchInput.value?.focus())}if(e.key==='Escape'){search.value='';mobileMenu.value=false}}
-watch([reducedMotion,ticket,serviceJobs],save)
+watch([reducedMotion,jobs],save)
 onMounted(()=>{
-  try{const stored=JSON.parse(localStorage.getItem('placa-lab:v1')||'{}');device.value=stored.device==='desktop'?'desktop':'laptop';guideRecords.value=validatedRecords(stored.guideRecords);ticket.value=restoreTicket(stored.ticket);serviceJobs.value={ memory:restoreServiceJob('memory',stored.serviceJobs?.memory),cooling:restoreServiceJob('cooling',stored.serviceJobs?.cooling) };completed.value=Array.isArray(stored.completed)?[...new Set(stored.completed.filter(id=>lessons.some(l=>l.id===id)))]:[];solved.value=Array.isArray(stored.solved)?[...new Set(stored.solved.filter(id=>['no-power','no-display'].includes(id)))]:[];reducedMotion.value=stored.reducedMotion??window.matchMedia('(prefers-reduced-motion: reduce)').matches}catch{storageAvailable.value=false}
+  try {
+    const stored = JSON.parse(localStorage.getItem('placa-lab:v1') || '{}')
+    device.value = stored.device === 'desktop' ? 'desktop' : 'laptop'
+    guideRecords.value = validatedRecords(stored.guideRecords)
+    jobs.value = restoreOrders(stored)
+    completed.value = Array.isArray(stored.completed) ? [...new Set(stored.completed.filter(id => lessons.some(lesson => lesson.id === id)))] : []
+    solved.value = Array.isArray(stored.solved) ? [...new Set(stored.solved.filter(id => ['no-power','no-display'].includes(id)))] : []
+    reducedMotion.value = stored.reducedMotion ?? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch { storageAvailable.value = false }
   restorePage()
   window.addEventListener('popstate',restorePage)
   document.addEventListener('keydown',keydown)
@@ -226,9 +244,10 @@ onBeforeUnmount(()=>{window.removeEventListener('popstate',restorePage);stop();c
     <div class="main-shell">
       <main id="main" class="main-content" tabindex="-1">
         <template v-if="view==='turno'">
-          <OrderDesk v-if="!orderId" :ticket="ticket" :jobs="serviceJobs" @open="openOrder"/>
-          <TurnoCase v-else-if="orderId==='001'" v-model="ticket" :reduced-motion="reducedMotion" @solve="solveCase" @reference="consultPower" @menu="openOrder('')"/>
-          <ServiceChallenge v-else :key="serviceId" :id="serviceId" :model-value="serviceJobs[serviceId]" @update:model-value="saveJob" @menu="openOrder('')"/>
+          <OrderDesk v-if="!activeOrder" :orders="orderCards" :delivered="deliveredOrders" @open="openOrder"/>
+          <TurnoCase v-else-if="activeOrder.key==='power'" v-model="activeJob" :reduced-motion="reducedMotion" @solve="solveCase" @reference="consultPower" @menu="openOrder('')"/>
+          <JackChallenge v-else-if="activeOrder.key==='jack'" v-model="activeJob" @menu="openOrder('')"/>
+          <ServiceChallenge v-else :key="activeOrder.key" :id="activeOrder.key" v-model="activeJob" @menu="openOrder('')"/>
         </template>
         <WorkshopCover v-if="view==='home'" @open="navigate" @guide="openGuide" />
         <GuideBook v-if="view==='workshop'" :device="device" :guide-id="guideId" :records="guideRecords" @device="setDevice" @guide="openGuide" @record="saveStep" @inspect="inspectGuidePart" @fit="openFit" />
