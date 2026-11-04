@@ -2,6 +2,26 @@
 
 ## Concepto y alcance
 
+### Inventario del modelo actual
+
+| Conjunto | Laptop | PC de escritorio |
+| --- | --- | --- |
+| CPU y memoria | CPU BGA con die expuesto, MLCC y SO-DIMM horizontal | CPU con cubierta metálica, marco de retención, palanca, muestra de contactos LGA visible en despiece y DIMM vertical |
+| Tarjetas y zócalos | SSD M.2 y módulo Wi-Fi/Bluetooth 2230 con blindaje, tornillo y dos cables coaxiales hacia la bisagra | SSD M.2, ranura PCIe x16, ranura corta x1 y tarjeta gráfica extraíble con dos ventiladores, contactos y escuadra con salidas de vídeo |
+| Alimentación y pasivos | Entrada DC, batería con arnés y cargador | ATX de 24 pines, EPS de 8 pines y fuente cerrada dentro del gabinete |
+| Detalle de las etapas | En ambos equipos se representan MOSFET, bobinas, resistencias, shunt, diodo, fusible, MLCC, capacitores cilíndricos y rectangulares polarizados | Se añade disipador extraíble sobre las etapas del VRM y un controlador PWM junto a ellas |
+| Lógica y reloj | Chipset, EC, flash SPI, cristal y pila RTC cableada | Chipset con disipador, Super I/O, flash SPI, cristal, pila de moneda, controlador Ethernet y códec de audio |
+| Conectores | Puertos laterales, conector de batería, flex de teclado y touchpad y arnés de pantalla | SATA, panel frontal, USB interno, audio frontal y ventiladores. El panel trasero agrupa USB-A/C, Ethernet, vídeo y audio |
+| Construcción | En ambas placas se ven taladros metalizados, vías, serigrafía y una muestra de pistas con serpentinas | El gabinete incluye bandeja, separadores, rejillas, panel desmontable y aperturas para puertos y gráfica |
+
+El selector del laboratorio ofrece **23 tipos en laptop y 27 en PC**. Los pines, las fijaciones, los puertos agrupados y los trazos de cobre son detalles de sus conjuntos. Los recorridos de encendido y calor y los puntos del multímetro son simulaciones guiadas. Las pistas dibujadas ilustran la construcción de una placa y no forman un esquema eléctrico completo.
+
+Para reconocer la tarjeta inalámbrica, abre **Laptop → Inspeccionar → Tarjeta de red Wi-Fi / Bluetooth → Ver de cerca**. En **PC de escritorio**, pulsa **Quitar panel → Extraer gráfica → Aislar placa → Ver despiece**. Puedes regresar una etapa o montar de nuevo el gabinete. La gráfica de este ejemplo se alimenta por la ranura.
+
+Las conexiones de antena y la retención de la tarjeta se contrastaron con los manuales de [Dell Latitude 5420](https://www.dell.com/support/manuals/es-mx/latitude-5420-laptop/5420_sp14_sm/extracci%C3%B3n-de-la-tarjeta-wlan?guid=guid-a62f91fa-c57b-437e-87ef-64bfec77f252&lang=es-mx) y [OptiPlex Tower 7020](https://www.dell.com/support/manuals/en-us/optiplex-7020t-desktop/optiplex-tower-7020-owners-manual/removing-the-graphics-card?guid=guid-12abe376-16df-4c60-898a-4a22aabeb99b). Ambos equipos 3D son modelos didácticos genéricos.
+
+### Diseño inicial
+
 Un portátil abierto permite seguir dos recorridos reales: la energía desde la entrada hasta las cargas y el calor desde el procesador hasta el aire exterior. La placa, la batería, los módulos de memoria y la refrigeración se separan por conjuntos; los componentes pequeños se reconocen mediante acercamientos y su encapsulado.
 
 Revisión Hero sobre la aplicación Vue existente. Se mantienen Three.js y sus controles para el modelo principal; se aplican los criterios de Anatomy de geometría coherente, apoyos, conectores, detalle funcional y movimiento temporal. El kit de ilustración de Anatomy se utiliza para las láminas de reconocimiento. Las auditorías de SVG de la skill no son una certificación de las mallas de Three.js; estas se verifican con pruebas de disposición y revisión visual por regiones.

@@ -2,6 +2,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, provide, ref, w
 import { getComponents } from '../data.js'
 import { sequenceFor, heatSequenceFor } from '../flows.js'
 import { externalParts } from '../three/layout.js'
+import { desktopStages } from '../three/assembly.js'
 import { useProgress } from './useProgress.js'
 import { useRouter } from '../router/index.js'
 
@@ -9,8 +10,8 @@ const preferencesKey = Symbol('board-preferences')
 const boardKey = Symbol('active-board')
 
 // Keep the user's orientation and labels across screens, but never keep a WebGL scene running.
-export function provideBoardPreferences() {
-  provide(preferencesKey, { selected: ref('ram'), modelMode: ref('interior'), labels: ref(true) })
+export function provideBoardPreferences(device) {
+  provide(preferencesKey, { selected: ref('ram'), modelMode: ref(device.value === 'desktop' ? 'equipment' : 'interior'), labels: ref(true) })
 }
 
 export function provideBoard(page) {
@@ -27,8 +28,9 @@ export function provideBoard(page) {
   const stageFrame = ref(null)
   const diagnosticPower = ref(false)
   const diagnosticCase = ref('no-power')
-  const modelModes = computed(() =>
-    [
+  const modelModes = computed(() => device.value === 'desktop' && !diagnostic
+    ? desktopStages.map(stage => ({ id: stage.mode, name: stage.label }))
+    : [
       { id: 'equipment', name: 'Equipo' },
       { id: 'interior', name: 'Interior' },
       { id: 'board', name: 'Placa' },
@@ -92,21 +94,28 @@ export function provideBoard(page) {
   function changeMode(id) {
     if (
       flowActive.value &&
-      (['exploded', 'equipment'].includes(id) || (flowKind.value === 'thermal' && id === 'board'))
+      (['exploded', 'released', 'equipment'].includes(id) || (flowKind.value === 'thermal' && id === 'board'))
     )
       closeFlow()
     modelMode.value = id
+    if (device.value === 'desktop' && !diagnostic && !flowActive.value) {
+      if (id === 'interior' || id === 'released') selected.value = 'gpu'
+      if (id === 'board') selected.value = 'pcie'
+      infoTab.value = 'recognition'
+    }
   }
   function selectPart(id) {
     if (flowActive.value) closeFlow()
     selected.value = id
     infoTab.value = 'recognition'
-    if (modelMode.value === 'equipment' || (modelMode.value === 'board' && externalParts.includes(id)))
+    if (device.value === 'desktop' && id === 'pcie' && !['board','exploded','released'].includes(modelMode.value)) {
+      modelMode.value = 'released'
+    } else if (modelMode.value === 'equipment' || (modelMode.value === 'board' && externalParts.includes(id)))
       modelMode.value = 'interior'
   }
   async function focusPart() {
     if (flowActive.value) closeFlow()
-    if (['equipment', 'exploded'].includes(modelMode.value) || selected.value === 'cpu') {
+    if (['cpu', 'chipset', 'vrm', 'inductor', 'pcie'].includes(selected.value) || ['equipment', 'exploded'].includes(modelMode.value)) {
       modelMode.value = externalParts.includes(selected.value) ? 'interior' : 'board'
     }
     await nextTick()
@@ -139,7 +148,7 @@ export function provideBoard(page) {
   watch(route, applyRoute)
   watch(device, () => {
     stop()
-    modelMode.value = 'interior'
+    modelMode.value = device.value === 'desktop' && !diagnostic ? 'equipment' : 'interior'
     if (flowActive.value) startFlow()
     else validateSelection()
   })

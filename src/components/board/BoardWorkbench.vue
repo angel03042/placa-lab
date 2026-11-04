@@ -2,6 +2,7 @@
 import Icon from '../Icon.vue'
 import BoardScene from '../BoardScene.vue'
 import FlowReadout from '../FlowReadout.vue'
+import DesktopAssembly from './DesktopAssembly.vue'
 import { useBoard } from '../../composables/useBoard.js'
 
 const {
@@ -68,7 +69,8 @@ const {
         </button>
       </div>
     </div>
-    <div class="anatomy-modes" role="group" aria-label="Vista del modelo">
+    <DesktopAssembly v-if="device === 'desktop' && !diagnostic && !flowActive" :mode="modelMode" @change="changeMode" />
+    <div v-else class="anatomy-modes" role="group" aria-label="Vista del modelo">
       <button
         v-for="m in modelModes"
         :key="m.id"
@@ -117,10 +119,11 @@ const {
         :guided="flowActive"
         :reduced-motion="reducedMotion"
         @select="selectPart"
+        @open-panel="changeMode('interior')"
       />
       <div class="stage-hint">
         <Icon name="MousePointer2" :size="13" /><span
-          >Arrastra para girar · Selecciona para descubrir</span
+          >{{ device === 'desktop' && modelMode === 'equipment' ? 'Arrastra para girar · Toca el panel para abrir' : 'Arrastra para girar · Selecciona para descubrir' }}</span
         >
       </div>
       <div class="scene-tools">
@@ -155,7 +158,7 @@ const {
           <Icon name="Tags" :size="17" />
         </button>
       </div>
-      <div class="stage-scale" aria-hidden="true">LP / REV 02 <span></span></div>
+      <div class="stage-scale" aria-hidden="true">{{ device === 'desktop' ? 'ATX' : 'LP' }} / REV 03 <span></span></div>
     </div>
     <div class="component-picker">
       <label for="part-picker">INSPECCIONAR</label

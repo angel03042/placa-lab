@@ -4,12 +4,14 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { createModel } from '../three/model.js'
-import { explodedOffsets, fanActive, externalParts } from '../three/layout.js'
+import { fanActive } from '../three/layout.js'
+import { applyModelPose, isPartVisible } from '../three/modelPose.js'
+import { frameDesktop } from '../three/frameAssembly.js'
 import { getComponents } from '../data.js'
 import { createFlowOverlay } from '../three/flowOverlay.js'
 import { createProbeOverlay, layoutProbeLabels, probePoints } from '../three/probeOverlay.js'
 const props=defineProps({device:String,selected:String,labels:Boolean,step:Number,running:Boolean,reducedMotion:Boolean,mode:String,flowKind:String,thermalStep:Number,guided:Boolean,probeMode:Boolean,redPoint:String,grounded:Boolean})
-const emit=defineEmits(['select','probe']),host=ref(null),error=ref(false),labelNodes=new Map()
+const emit=defineEmits(['select','probe','open-panel']),host=ref(null),error=ref(false),labelNodes=new Map()
 const labelParts=computed(()=>getComponents(props.device))
 const probing=computed(()=>props.probeMode && props.device==='laptop' && props.mode==='board')
 const callouts=ref([])
@@ -25,11 +27,9 @@ const anchor = id => {
   const point = model?.flowAnchors[id]
   return point ? model.groups.pcb.localToWorld(point.clone()) : null
 }
-function setMode(){
+function setMode(instant = false){
   if(!model)return
-  const g=model.groups,equipment=props.mode==='equipment',board=props.mode==='board'
-  g.exterior.visible=equipment;g.chassis.visible=!board;g.pcb.visible=!equipment;g.battery.visible=!equipment&&!board;g.thermal.visible=!board
-  if(props.reducedMotion)for(const name of Object.keys(explodedOffsets))g[name].position.y=props.mode==='exploded'?explodedOffsets[name]:0
+  applyModelPose(model.groups, props.device, props.mode, instant || props.reducedMotion ? 1 : 0, props.guided)
   reset()
 }
 function build(){
@@ -39,7 +39,7 @@ function build(){
   model=createModel(props.device);scene.add(model.root);model.root.updateMatrixWorld(true)
   for(const g of Object.values(model.parts)){const b=new THREE.Box3().setFromObject(g);g.userData.center=g.worldToLocal(b.getCenter(new THREE.Vector3()));g.userData.radius=b.getSize(new THREE.Vector3()).length()/2}
   syncProbes()
-  setMode()
+  setMode(true)
 }
 function syncProbes(){
   if(!model || !renderer)return
@@ -74,16 +74,24 @@ function reset(){
     cameraTo(target.clone().add(direction.normalize().multiplyScalar(distance)), target)
     return
   }
+  if (!lap && props.mode !== 'board') {
+    const { position, target } = frameDesktop(props.mode, camera.aspect, camera.fov)
+    cameraTo(position, target)
+    return
+  }
   const pos=equipment?V(14,13,21):lap?V(9.2,17.5,19):V(8,12,14)
   if(props.mode==='exploded')pos.y+=4
   cameraTo(pos.multiplyScalar(narrow),V(0,equipment?2.5:props.mode==='exploded'?1.1:0,0))
 }
 function focus(){
   if(!controls || error.value)return
+  applyModelPose(model.groups, props.device, props.mode, 1, props.guided)
+  model.root.updateMatrixWorld(true)
   const center=anchor(props.selected),part=model?.parts[props.selected];if(!center)return
   focused=true;host.value?.classList.add('is-focused')
   const radius=Math.max(.32,Math.min(part.userData.radius,4.4)),distance=Math.max(1.3,radius*3.5/Math.min(1,camera.aspect))
-  cameraTo(center.clone().add(V(.48,.95,1).normalize().multiplyScalar(distance)),center)
+  const direction = props.selected === 'gpu' ? V(.34,.48,1) : V(.48,.95,1)
+  cameraTo(center.clone().add(direction.normalize().multiplyScalar(distance)),center)
 }
 function zoom(direction){if(!controls || error.value)return;goal=null;camera.position.sub(controls.target).multiplyScalar(direction>0?.8:1.25).add(controls.target);controls.update()}
 function rotate(direction=1){if(!controls || error.value)return;goal=null;const o=camera.position.clone().sub(controls.target).applyAxisAngle(V(0,1,0),direction*Math.PI/4);camera.position.copy(controls.target).add(o);controls.update()}
@@ -105,6 +113,10 @@ function pointerUp(e){
   if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>5)return
   const rect=renderer.domElement.getBoundingClientRect(),ray=new THREE.Raycaster()
   ray.setFromCamera(new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1),camera)
+  if (props.device === 'desktop' && props.mode === 'equipment') {
+    if (ray.intersectObject(model.groups.exterior, true).length) emit('open-panel')
+    return
+  }
   const targets=probes?[...probes.targets,...model.selectables]:model.selectables
   const hit=ray.intersectObjects(targets,!probes).find(h=>{let o=h.object;while(o){if(!o.visible)return false;o=o.parent}return true})
   if(!hit)return
@@ -112,7 +124,7 @@ function pointerUp(e){
   if(probing.value){
     const point=probe || partToPoint.get(id)
     if(point)emit('probe',point)
-  }else emit('select',id)
+  }else if(id) emit('select',id)
 }
 const projected=V(0,0,0)
 let lastProjection=''
@@ -129,7 +141,7 @@ function updateProbeLabels(){
   callouts.value=layoutProbeLabels(points,size.width,size.height)
 }
 function updateLabels(){
-  const featured=size.width<430?['fan',props.device==='laptop'?'battery-pack':'ram']:props.device==='laptop'?['fan','heatsink','ram','ssd','battery-pack']:['input','heatsink','ram','ssd','pcie']
+  const featured=size.width<430?(props.device==='laptop'?['wifi','fan']:['gpu','pcie']):props.device==='laptop'?['fan','wifi','ram','ssd','battery-pack']:['gpu','heatsink','ram','ssd','pcie']
   const occupied = []
   const parts = [...labelParts.value].sort((a,b) => Number(b.id===props.selected)-Number(a.id===props.selected))
   for (const c of parts) {
@@ -137,7 +149,8 @@ function updateLabels(){
     if (!el || !point) continue
     el.style.visibility='hidden'
     const selected=c.id===props.selected
-    if (focused || props.mode==='equipment' || (props.mode==='board' && externalParts.includes(c.id))) continue
+    if (focused || props.mode==='equipment' || !isPartVisible(model.parts[c.id])) continue
+    if (!selected && props.device === 'desktop' && props.mode === 'interior' && c.id === 'pcie') continue
     if (props.guided ? (!selected || !props.labels) : (!selected && !(props.labels && featured.includes(c.id)))) continue
     point.y+=.35; point.project(camera)
     if (point.z>=1 || Math.abs(point.x)>.98 || Math.abs(point.y)>.86) continue
@@ -155,7 +168,7 @@ function updateLabels(){
 }
 function updateOverlays(){
   const a=anchor(props.selected),g=model.parts[props.selected]
-  selection.visible=!probing.value&&!props.guided&&!!a&&props.mode!=='equipment'&&!(props.mode==='board'&&externalParts.includes(props.selected))
+  selection.visible=!probing.value&&!props.guided&&!!a&&props.mode!=='equipment'&&isPartVisible(g)
   if(selection.visible){const b=new THREE.Box3().setFromObject(g);b.expandByScalar(.06);selection.box.copy(b)}
 
 }
@@ -165,7 +178,7 @@ function animate(time){
   if(props.running && !props.reducedMotion) clock+=dt
   const blend=props.reducedMotion?1:1-Math.exp(-dt*7)
   if(goal){camera.position.lerp(goal.position,blend);controls.target.lerp(goal.target,blend);if(camera.position.distanceTo(goal.position)<.005)goal=null}
-  for(const[name,offset]of Object.entries(explodedOffsets))model.groups[name].position.y=THREE.MathUtils.lerp(model.groups[name].position.y,props.mode==='exploded'?offset:0,blend)
+  applyModelPose(model.groups, props.device, props.mode, blend, props.guided)
   if(fanActive(props.step,props.mode)&&props.running&&!props.reducedMotion)for(const rotor of model.rotors)rotor.rotation.y-=dt*2.4
   controls.update();model.root.updateMatrixWorld(true);labelsElapsed+=dt
   if(probes)updateProbeLabels()
@@ -193,7 +206,7 @@ onMounted(()=>{
     build();animate(0)
   }catch(e){console.error('Scene initialization',e);error.value=true}
 })
-watch(()=>props.device,build);watch(()=>props.mode,setMode);watch(()=>props.selected,()=>{if(focused)focus()})
+watch(()=>props.device,build);watch(()=>props.mode,()=>setMode());watch(()=>props.selected,()=>{if(focused)focus()})
 watch(probing,()=>{lastProjection='';syncProbes();reset()})
 watch(()=>[props.redPoint,props.grounded],()=>probes?.update(props.redPoint,props.grounded))
 onBeforeUnmount(()=>{cancelAnimationFrame(frame);resizeObserver?.disconnect();intersectionObserver?.disconnect();controls?.dispose();probes?.dispose();flow?.dispose();model?.dispose();environment?.dispose();scene?.traverse(o=>{if(o.isMesh||o.isLine){o.geometry?.dispose();if(!Array.isArray(o.material))o.material?.dispose()}});renderer?.dispose()})

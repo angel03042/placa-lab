@@ -26,8 +26,8 @@ Para desplegar desde GitHub en Vercel, importa el repositorio con el preset **Vi
 ## Qué incluye
 
 - Vue 3 con Composition API, Vite, Tailwind CSS 4, JavaScript y Lucide.
-- Modelos 3D propios generados con Three.js: 19 tipos de componente en laptop y 18 en PC, rotación, zoom, selección y acercamiento por pieza.
-- Laptop con carcasa, teclado y pantalla; vistas Equipo, Interior, Placa y Despiece. La PC ofrece Interior, Placa y Despiece.
+- Modelos 3D propios generados con Three.js, con 23 tipos seleccionables en laptop y 27 en PC. Cada ficha corresponde a una pieza del modelo.
+- Laptop con carcasa, teclado, pantalla y tarjeta Wi-Fi/Bluetooth M.2 2230 con dos conexiones de antena. En PC se puede abrir el gabinete, extraer la gráfica PCIe, aislar la placa y volver a montar. El [inventario por equipo](docs/model-plan.md#inventario-del-modelo-actual) distingue las piezas seleccionables de los detalles de construcción.
 - SO-DIMM horizontal con contactos, muesca y clips; DIMM de escritorio vertical; SSD M.2, turbina o ventilador axial, batería, placa térmica, tubos, aletas, resistencias, bobinas, MLCC, capacitores de polímero, fusible y diodo.
 - Fichas con reconocimiento por forma y encapsulado, función, señales, ubicación, síntomas y criterios de diagnóstico. Las ilustraciones de reconocimiento se generan con el kit de Anatomy.
 - Secuencia conceptual de encendido con reproducción, pausa y selección manual de etapas.

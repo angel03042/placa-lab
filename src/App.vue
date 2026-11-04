@@ -16,7 +16,7 @@ const progress = provideProgress()
 const { route } = router
 const { activeLesson, toast, completeLesson, exploreLesson } = provideStudy(progress, router)
 const { completed, reducedMotion, storageAvailable } = progress
-provideBoardPreferences()
+provideBoardPreferences(progress.device)
 const views = Object.fromEntries(routes.map((page) => [page.id, defineAsyncComponent(page.load)]))
 const currentView = computed(() => views[route.value.page.id])
 const settings = ref(null)

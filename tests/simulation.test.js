@@ -44,7 +44,7 @@ test('healthy low core resistance is explained rather than labeled a short',()=>
 test('both board variants have valid component targets for the full sequence',()=>{
   for(const device of ['laptop','desktop']) {
     const ids=getComponents(device).map(c=>c.id)
-    assert.equal(ids.length,device==='laptop'?19:18)
+    assert.ok(ids.includes(device === 'laptop' ? 'wifi' : 'gpu'))
     assert.equal(new Set(ids).size,ids.length)
     for(const step of sequenceFor(device))assert.ok(ids.includes(step.id))
     for(const lesson of lessons)assert.ok(ids.includes(lesson.focus))

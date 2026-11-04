@@ -1,13 +1,17 @@
 import * as THREE from 'three'
 import { createParts } from './parts.js'
 import { ramSize, laptopLayout as L } from './layout.js'
+import { buildDesktopSocket, buildExpansionSlots } from './desktopSockets.js'
+import { buildBoardDetails } from './boardDetails.js'
+import { buildDesktopHardware } from './desktopHardware.js'
+import { finishBoardSurface } from './boardSurface.js'
 
 export function createModel(device) {
   const laptop=device==='laptop',p=createParts(),{box,cylinder,tube,text,screw,smd,chip,inductor}=p
   const root=new THREE.Group(),groups={},parts={},rotors=[],flowAnchors={}
   function group(name,parent=root){const g=new THREE.Group();parent.add(g);groups[name]=g;return g}
   const chassis=group('chassis'),pcb=group('pcb'),ram=group('ram',pcb),ssd=group('ssd',pcb),thermal=group('thermal',pcb),battery=group('battery'),exterior=group('exterior')
-  exterior.position.y=-.48
+  if(laptop) exterior.position.y=-.48
   function part(id,parent=pcb){const g=new THREE.Group();parent.add(g);parts[id]=g;return g}
   function pcbShape(){
     const shape=new THREE.Shape(),points=laptop?[[-4.15,-4.35],[6.5,-4.35],[6.5,1.8],[-4.15,1.8],[-4.15,-.65],[-4.55,-1.1],[-4.55,-3.8]]:[[-4,-4.3],[4,-4.3],[4,4.3],[-4,4.3]]
@@ -15,7 +19,8 @@ export function createModel(device) {
     const holes=laptop?[[-3.85,1.48],[6.1,1.45],[6.1,-4],[-3.85,-4]]:[[-3.65,-3.95],[3.65,-3.95],[-3.65,3.95],[3.65,3.95]]
     for(const[x,z]of holes){const h=new THREE.Path();h.absarc(x,-z,.085,0,Math.PI*2,true);shape.holes.push(h)}
     const g=new THREE.ExtrudeGeometry(shape,{depth:.1,bevelEnabled:true,bevelThickness:.014,bevelSize:.018,bevelSegments:1});g.rotateX(-Math.PI/2);p.resources.add(g);p.mesh(pcb,g,p.material('#174c42',.18,.7),0,0,0)
-    for(const[x,z]of holes){cylinder(pcb,x,.105,z,.15,.012,'#b1a46d',null,.7);screw(pcb,x,.12,z)}
+    finishBoardSurface(p, pcb, holes, laptop)
+    for(const[x,z]of holes) screw(chassis,x,.12,z)
   }
   pcbShape()
   if(laptop){
@@ -49,10 +54,12 @@ export function createModel(device) {
     cylinder(lid,0,9,.23,.055,.04,'#111b23').rotation.x=Math.PI/2
     for(const x of[-5.5,5.5]){const h=cylinder(exterior,x,.65,-4.8,.27,1.4,'#424b52',null,.8);h.rotation.z=Math.PI/2}
   }
-  const cpu=part('cpu'),[cx,cz]=laptop?L.cpu:[-.6,-1.6]
-  box(cpu,cx,.19,cz,1.8,.14,1.65,'#226454','cpu',.1)
-  if(laptop){box(cpu,cx,.29,cz,.82,.07,.64,'#435768','cpu',.85,.01);for(let i=0;i<6;i++)smd(cpu,cx-.66+i*.26,cz+.6,'capacitor','cpu',.29,.6)}
-  else{box(cpu,cx,.28,cz,1.9,.14,1.8,'#41494b','cpu',.65);box(cpu,cx,.39,cz,1.5,.1,1.4,'#c1c5c4','cpu',.85);text(cpu,'PROCESSOR',cx,.445,cz,1,.19,'#5c6567',null,'cpu');tube(cpu,[[cx+1,.19,cz-.9],[cx+1,.19,cz+.9],[cx+.6,.19,cz+1]],.04,'#b6bcbb','cpu')}
+  const cpu=part('cpu', laptop ? pcb : group('cpuCarrier', pcb)),[cx,cz]=laptop?L.cpu:[-.6,-1.6]
+  if(laptop){
+    box(cpu,cx,.19,cz,1.8,.14,1.65,'#226454','cpu',.1)
+    box(cpu,cx,.29,cz,.82,.07,.64,'#435768','cpu',.85,.01)
+    for(let i=0;i<6;i++)smd(cpu,cx-.66+i*.26,cz+.6,'capacitor','cpu',.29,.6)
+  } else buildDesktopSocket(p, pcb, cpu, cx, cz)
   text(pcb,'CPU',cx,.118,cz+1.05,.55,.18)
   // RAM lies parallel to the motherboard in the laptop; DIMMs stand vertically in a desktop.
   const rg=part('ram',ram),[rw,rh,rd]=ramSize(device)
@@ -111,21 +118,15 @@ export function createModel(device) {
   const inp=part('input'),[ix,iz]=positions.input
   if(laptop){box(inp,ix,.3,iz,.64,.5,.73,'#21282d','input');const jack=cylinder(inp,ix,.33,iz-.38,.21,.06,'#9bacae','input',.8);jack.rotation.x=Math.PI/2;const hole=cylinder(inp,ix,.33,iz-.42,.15,.07,'#151b20','input',0);hole.rotation.x=Math.PI/2;const pin=cylinder(inp,ix,.33,iz-.46,.042,.07,'#c7bd8f','input',.8);pin.rotation.x=Math.PI/2}
   else{box(inp,ix,.45,iz,.52,.68,1.5,'#d3cebc','input');for(let row=0;row<2;row++)for(let i=0;i<12;i++)box(inp,ix-.13+row*.26,.795,iz-.67+i*.12,.16,.015,.08,'#1d2829','input',0,.007)}
-  const io=part('io')
-  for(let n=0;n<3;n++){
-    const x=laptop?6.45:-4,z=laptop?-.9+n*.85:-2.5+n*1.25
-    box(io,x,.34,z,.55,.47,.68,'#a6afb3','io',.85,.035)
-    box(io,x+(laptop?.28:-.28),.34,z,.012,.31,.53,'#172329','io',0,.015)
-    box(io,x+(laptop?.29:-.29),.31,z,.016,.065,.41,'#3c7390','io',.2,.01)
-    for(const side of[-1,1])box(io,x,.12,z+side*.4,.3,.035,.14,'#bec4c1','io',.8,.005)
-  }
+  const wifi = laptop ? part('wifi', group('wifiCarrier', pcb)) : null
+  buildBoardDetails({ p, pcb, thermal, part, laptop, positions, wifi })
   if (!laptop) {
     // Reference points for the two power connectors and the soft-power circuit.
-    const eps = box(pcb,-1.9,.37,-3.75,1.15,.51,.48,'#303b43')
+    const eps = box(pcb,-1.9,.37,-3.75,1.15,.51,.48,'#303b43','input')
     for (let row=0;row<2;row++) for (let col=0;col<4;col++) {
       box(eps,-.39+col*.26,.258,-.12+row*.24,.18,.012,.16,'#11191f',null,0,.006)
     }
-    const header = box(pcb,-1,.16,3.78,.7,.12,.3,'#252f35')
+    const header = box(pcb,-1,.16,3.78,.7,.12,.3,'#252f35','headers')
     for (let i=0;i<4;i++) for (const z of [-.08,.08]) {
       box(header,-.23+i*.15,.13,z,.044,.2,.044,'#d3b776',null,.65,.003)
     }
@@ -136,13 +137,7 @@ export function createModel(device) {
     flowAnchors['power-switch'] = new THREE.Vector3(-1,.42,3.78)
     flowAnchors['standby-control'] = new THREE.Vector3(1.68,.27,.55)
   }
-  // Purposeful routes between populated regions, plus vias and test pads.
-  for(let i=0;i<18;i++){
-    const start=laptop?[.03,.112,-1.9+i*.04]:[.48,.112,-1.6+i*.04],end=laptop?[.15+i*.055,.112,-.9]:[1.95,.112,-.9+i*.04]
-    tube(pcb,[start,[start[0]+.2,.112,start[2]],[end[0],.112,end[2]-.2],end],.007,'#428476')
-  }
-  for(let i=0;i<20;i++){const x=laptop?-3.6+i*.45:-3.5+i*.36,z=laptop?1.48:3.9;cylinder(pcb,x,.115,z,.028,.012,'#c0a36a',null,.65)}
-  text(pcb,laptop?'PLACA LAB / LP-02':'PLACA LAB / ATX-02',laptop?.3:0,.122,laptop?-4.08:-4,3.1,.2)
+  text(pcb,laptop?'LP / REV 03':'ATX / REV 03',laptop?3.55:0,.122,laptop?-4.10:-4,1.5,.17)
   if(laptop){
     const bg=part('battery-pack',battery)
     box(bg,0,.01,3.48,10.6,.4,2.68,'#1d242b','battery-pack',.1,.12)
@@ -170,11 +165,10 @@ export function createModel(device) {
     for(const[x,z]of[[fx-1.3,fz+.8],[fx+1.1,fz+.85]]){box(fg,x,.2,z,.4,.15,.3,'#303a41','fan');screw(fg,x,.3,z,'fan')}
     for(let n=0;n<4;n++)tube(fg,[[fx+1.25,.22,fz+.3],[-4.05,.22,-1.6+n*.06],[-3.65,.22,-1.5+n*.06]],.018,['#bc7154','#c7b879','#303a41','#6c9aa0'][n],'fan')
     box(fg,-3.6,.2,-1.4,.32,.18,.39,'#ddd4b5','fan')
-    // FFC keyboard connection and WLAN card are contextual detail, not extra diagnostic targets.
-    box(pcb,-2.5,.18,1.45,1.6,.2,.2,'#c7c8b8');box(pcb,-2.5,.12,2.04,1.3,.03,1.05,'#c6b9a1');box(pcb,-2.5,.15,2.52,1.3,.04,.2,'#527ba3')
-    box(pcb,-.3,.19,-3.5,1.4,.07,.7,'#215b4c');box(pcb,-.3,.3,-3.5,1.1,.14,.55,'#8b9699',null,.8);text(pcb,'WLAN',-.3,.375,-3.5,.7,.13,'#35484c')
   }else{
-    const pg=part('pcie');for(let n=0;n<2;n++){box(pg,-1.7,.25,2.5+n*.7,3.8,.3,.26,'#3e4547','pcie');box(pg,-1.7,.407,2.5+n*.7,3.5,.015,.065,'#121d20','pcie',0,0);box(pg,.3,.3,2.5+n*.7,.25,.4,.34,'#999f9b','pcie')}
+    buildExpansionSlots(p, part('pcie'))
+    const graphics = part('gpu', group('graphics', pcb))
+    buildDesktopHardware({ p, chassis, panel: exterior, graphics })
     const bg=part('battery');cylinder(bg,-2.6,.2,.7,.49,.18,'#323d40','battery');cylinder(bg,-2.6,.32,.7,.41,.08,'#b9c1c2','battery',.9);text(bg,'CR2032',-2.6,.365,.7,.62,.15,'#536165',null,'battery')
     const hg=part('heatsink',thermal);box(hg,cx,.54,cz,2.2,.17,2.2,'#9fa7aa','heatsink',.85)
     for(let i=0;i<20;i++)box(hg,cx-1.05+i*.11,1.08,cz,.035,1.02,2.1,'#a9b2b5','heatsink',.8,.005)

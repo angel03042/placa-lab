@@ -1,4 +1,7 @@
+import { hardwareComponents } from './hardwareCatalog.js'
+
 export const extraComponents = [
+  ...hardwareComponents,
   {id:'fan',name:'Ventilador',short:'Ventilador',category:'Refrigeración',ref:'FAN1',icon:'Activity',color:'#8eada8',summary:'Mueve el aire que se lleva el calor.',description:'En una laptop, la turbina toma aire por su cara circular y lo impulsa hacia las aletas del disipador. En una PC es habitual un ventilador axial sobre el disipador. El control ajusta su velocidad según el diseño y la temperatura.',tip:'El giro de esta escena se muestra lento para observar las aspas; no representa RPM medidas.',signal:'Alimentación / tacómetro / PWM',voltage:'Según el ventilador: consulta su etiqueta',symptoms:['Temperatura alta bajo carga','Ruido o roce mecánico','Ventilador que no gira cuando debería'],check:'Revisa obstrucciones, conector y orden de control. Algunos equipos detienen el ventilador en reposo.',location:'Junto a las aletas y una salida de aire',prefix:'FAN / JFAN',detail:'El número de cables y el pinout varían. No deduzcas la tensión únicamente por el color de los cables.'},
   {id:'heatsink',name:'Disipador y tubos de calor',short:'Disipador',category:'Refrigeración',ref:'HS1',icon:'SlidersHorizontal',color:'#bc845b',summary:'Del chip al metal; del metal al aire.',description:'La placa de contacto recibe calor del procesador mediante la interfaz térmica. Los tubos de calor lo transportan hasta una pila de aletas, donde el flujo de aire facilita su transferencia al ambiente.',tip:'En “Placa” ocultamos el conjunto para estudiar el chip. En un equipo real, el procesador necesita su refrigeración instalada para funcionar.',signal:'Transferencia térmica',voltage:'Componente térmico pasivo',symptoms:['Se limita el rendimiento por temperatura','Apagado térmico','Aletas bloqueadas por polvo'],check:'Comprueba fijación, limpieza e interfaz térmica siguiendo el manual del equipo. Conserva la posición y espesor de las almohadillas.',location:'En contacto con CPU; aletas junto al ventilador',prefix:'HS / conjunto térmico',detail:'Los tubos de calor son sellados y contienen un fluido de trabajo. El modelo muestra dos tubos y una placa de contacto genéricos.'},
   {id:'battery-pack',name:'Batería de la laptop',short:'Batería',category:'Alimentación',ref:'BAT1',icon:'BatteryCharging',color:'#9ca9af',summary:'Energía almacenada para trabajar sin adaptador.',description:'El paquete reúne celdas recargables y electrónica de protección y supervisión. Se conecta a la placa mediante un arnés; el controlador de carga y la batería coordinan la carga según sus condiciones.',tip:'Desconecta la batería según el manual antes de manipular módulos o medir resistencia. Una batería hinchada requiere reemplazo; no la perfores ni comprimas.',signal:'BAT+ / GND / comunicación',voltage:'La indicada en la etiqueta del paquete',symptoms:['Autonomía muy reducida','Apagado al retirar el adaptador','Deformación del paquete'],check:'Revisa estado físico, detección y salud reportada. No confundas la batería principal con una pila RTC.',location:'Bajo el reposamanos, separada de la placa',prefix:'BAT / BATT',detail:'La batería dibujada es un paquete ilustrativo, sin una tensión ni capacidad asignadas. No se abre durante esta práctica.',devices:['laptop']},
@@ -9,6 +12,7 @@ export const extraComponents = [
 ]
 
 const clues = {
+ ...Object.fromEntries(hardwareComponents.map(part => [part.id, part.clues])),
  cpu:['Sustrato cuadrado con un die visible en esta CPU móvil.','Está debajo de la placa de contacto del disipador.','En esta laptop es BGA; en la PC se representa un socket.'],
  ram:['PCB corto y ancho, instalado paralelo a la placa.','Ocho paquetes DRAM oscuros y contactos dorados en un borde.','Un zócalo y dos clips laterales sujetan el SO-DIMM.'],
  vrm:['Una etapa completa, no un solo chip.','Controlador y MOSFET junto a bobinas y capacitores.','Suele estar cerca de la carga que alimenta.'],
@@ -32,16 +36,19 @@ const clues = {
  diode:['Cuerpo oscuro de dos terminales en este ejemplo.','Una banda marca un extremo del encapsulado.','D o PD en la serigrafía; confirma tipo y polaridad en la hoja de datos.'],
 }
 export function recognitionFor(id,device){
+  if(id==='cpu'&&device==='desktop')return ['Encapsulado cuadrado con tapa metálica en este procesador de escritorio.','El marco del socket rodea la CPU y se cierra con una palanca lateral.','Abre la vista Placa para ver la CPU bajo el conjunto de refrigeración.']
   if(id==='ram'&&device==='desktop')return ['Módulo DIMM largo instalado perpendicular a la placa.','Chips DRAM en las caras y contactos dorados en el borde inferior.','Los seguros del socket retienen los extremos del módulo.']
   if(id==='heatsink'&&device==='desktop')return ['Base metálica sujeta sobre la CPU.','Aletas paralelas con canales que dejan pasar el aire.','El ventilador axial se fija sobre el bloque de este modelo.']
   if(id==='fan'&&device==='desktop')return ['Ventilador axial sobre las aletas del disipador.','Aspas anchas alrededor de un motor central.','Marco y tornillos sujetan el conjunto al disipador.']
   if(id==='input'&&device==='desktop')return ['Conector ATX rectangular de dos filas.','Cavidades con llaves y un seguro de retención.','Confirma el pinout y el conector específico en el manual.']
   return clues[id]||[]
 }
-export const illustratedParts=['ram','capacitor','resistor','inductor','fan','heatsink','battery-pack','ssd','bios','mosfet','cpu','fuse','diode']
+export const illustratedParts=['ram','capacitor','resistor','inductor','fan','heatsink','battery-pack','ssd','bios','mosfet','cpu','fuse','diode','wifi','gpu']
 const desktopArt = { ram:'dimm', fan:'axial-fan', heatsink:'fin-stack' }
 export function illustrationFor(id, device) {
   if (!illustratedParts.includes(id)) return null
+  // The CPU illustration shows an exposed mobile die, not the desktop heat spreader.
+  if (id === 'cpu' && device === 'desktop') return null
   const asset = (device === 'desktop' && desktopArt[id]) || id
   return '/components/' + asset + '.svg'
 }
