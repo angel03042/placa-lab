@@ -37,9 +37,27 @@ Para desplegar desde GitHub en Vercel, importa el repositorio con el preset **Vi
 - Seis lecciones con preguntas, glosario, búsqueda, filtros y progreso en localStorage.
 - Diseño adaptable, navegación por teclado, diálogos nativos, reducción de movimiento y alternativa de fichas cuando WebGL no está disponible.
 
-## Archivos principales
+## Dónde hacer un cambio
 
-- `src/App.vue`: navegación, laboratorio y vistas de aprendizaje.
+Cada sección tiene una vista en [src/views](src/views). Para cambiar el texto de bienvenida, por ejemplo, abre [HomeView.vue](src/views/HomeView.vue) y edita su `<template>`. Para cambiar las instrucciones de instalación de RAM que muestra el manual, edita el contenido de [guides.js](src/workshop/guides.js).
+
+| Pantalla | Enlace | Vista | Contenido o lógica que utiliza |
+| --- | --- | --- | --- |
+| Portada | `#home` | [HomeView.vue](src/views/HomeView.vue) | Presentación y accesos al taller |
+| Turno de taller | `#turno/004` | [WorkshopShiftView.vue](src/views/WorkshopShiftView.vue) | [Catálogo de órdenes](src/game/orders.js) y [reglas del reto 004](src/game/jackChallenge.js) |
+| Mantenimiento | `#workshop/ram` | [MaintenanceView.vue](src/views/MaintenanceView.vue) | [Pasos de cada procedimiento](src/workshop/guides.js) |
+| Compatibilidad | `#fit/ssd` | [CompatibilityView.vue](src/views/CompatibilityView.vue) | [Perfiles de equipos y reglas](src/workshop/fit.js) |
+| Laboratorio 3D | `#lab/calor` | [LabView.vue](src/views/LabView.vue) | [Visor y ficha](src/components/board), [etapas y descripciones de los recorridos](src/flows.js) |
+| Componentes | `#library` | [ComponentLibraryView.vue](src/views/ComponentLibraryView.vue) | [Catálogo](src/data.js) y [pistas de reconocimiento](src/recognition.js) |
+| Diagnóstico | `#diagnostics` | [DiagnosticsView.vue](src/views/DiagnosticsView.vue) | [Panel del multímetro](src/components/DiagnosticPanel.vue) y [mediciones](src/simulation.js) |
+| Ruta de aprendizaje | `#lessons` | [LessonsView.vue](src/views/LessonsView.vue) | Lecciones y preguntas en [data.js](src/data.js) |
+| Glosario | `#glossary` | [GlossaryView.vue](src/views/GlossaryView.vue) | Términos, definiciones y referencias en [data.js](src/data.js) |
+
+Para **añadir una pantalla**, crea `src/views/MiVista.vue` y agrega una entrada al arreglo de [routes.js](src/router/routes.js). Por ejemplo, `{ id: 'herramientas', name: 'Herramientas', load: () => import('../views/MiVista.vue') }` la incorpora al índice bajo `#herramientas`. Agrega `primary: true` si también debe aparecer en la barra principal. Conserva los identificadores de las rutas publicadas para que los enlaces guardados sigan abriendo.
+
+[App.vue](src/App.vue) monta el encabezado, la vista activa y los diálogos comunes. El [encabezado y las preferencias](src/components/layout) se editan por separado. El [guardado local](src/composables/useProgress.js) reúne las órdenes, las guías y las lecciones en `placa-lab:v1`. Usa sus acciones desde las vistas para que todas lean la misma partida.
+
+## Modelo, estilos y pruebas
 - `src/game/orders.js`: catálogo de órdenes de taller y compatibilidad con el progreso guardado.
 - `src/components/BoardScene.vue`: cámara, controles, selección, estados y animación temporal.
 - `src/three/model.js`, `parts.js`, `layout.js`: conjuntos físicos, primitivas y disposición.
