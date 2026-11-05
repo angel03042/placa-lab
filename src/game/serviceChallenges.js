@@ -73,7 +73,11 @@ export function applyServiceAction(job, action) {
   } else if (job.phase === 'diagnosis') {
     const obs = order.observations.find(item => action === 'observe/' + item.id)
     const suspect = order.suspects.find(item => action === 'diagnose/' + item.id)
-    if (obs) {
+    if (job.id === 'cooling' && action === 'observe/thermal') {
+      const observations = [...new Set([...job.observations, 'log', 'tach'])]
+      if (observations.length !== job.observations.length) change = { observations }
+      message = 'Registro completo: temperatura, orden de giro y RPM guardadas bajo la misma carga.'
+    } else if (obs) {
       message = obs.result
       if (!job.observations.includes(obs.id)) change = { observations:[...job.observations,obs.id] }
     } else if (suspect) {

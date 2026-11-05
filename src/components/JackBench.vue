@@ -6,8 +6,9 @@ const props = defineProps({
   probe: { type:String, default:'pin' },
   stage: { type:Number, default:0 },
   powered: Boolean,
+  repairMode: Boolean,
 })
-const emit = defineEmits(['position','probe'])
+const emit = defineEmits(['position','probe','target'])
 const jointState = computed(() => props.stage >= 4 ? 'Unión continua · soporte fijado' : props.stage >= 3 ? 'Unión resoldada' : 'Fisura en la unión de JDC1')
 const field = ref(null)
 const drag = ref(null)
@@ -131,9 +132,10 @@ function keyMove(event) {
         @pointerdown="dragStart" @pointermove="dragMove" @pointerup="drag=null" @pointercancel="drag=null" @lostpointercapture="drag=null" @keydown="powered && keyMove($event)">
         <span v-if="powered" aria-hidden="true">↕</span>
       </div>
-      <button v-for="point in [{id:'pin',label:'P1',name:'terminal positivo del conector'},{id:'pad',label:'P2',name:'pista de entrada de la placa'}]"
+      <template v-if="!repairMode"><button v-for="point in [{id:'pin',label:'P1',name:'terminal positivo del conector'},{id:'pad',label:'P2',name:'pista de entrada de la placa'}]"
         :key="point.id" type="button" :class="['jack-target','point-'+point.id]" :aria-label="point.label+' · '+point.name" :aria-pressed="probe===point.id"
-        @click="emit('probe',point.id)">{{point.label}}</button>
+        @click="emit('probe',point.id)">{{point.label}}</button></template>
+      <template v-else><button v-for="point in [{id:'joint',label:'Unión',x:68,y:83},{id:'terminal',label:'Terminal',x:68,y:56},{id:'pad',label:'Pad',x:81,y:76},{id:'support',label:'Soporte',x:50,y:73}]" :key="point.id" class="jack-target" :style="{left:point.x+'%',top:point.y+'%'}" @click="emit('target',point.id)">{{point.label}}</button></template>
     </div>
     <figcaption><span class="jack-state"><i :class="{on:powered}"></i>{{ powered?'Banco alimentado':'Equipo aislado' }}</span><span>{{ inspected?jointState:powered?'Arrastra la clavija hacia arriba o abajo.':'Punta común en masa.' }}</span></figcaption>
   </figure>

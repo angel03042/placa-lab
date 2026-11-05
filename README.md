@@ -58,6 +58,10 @@ Para **añadir una pantalla**, crea `src/views/MiVista.vue` y agrega una entrada
 [App.vue](src/App.vue) monta el encabezado, la vista activa y los diálogos comunes. El [encabezado y las preferencias](src/components/layout) se editan por separado. El [guardado local](src/composables/useProgress.js) reúne las órdenes, las guías y las lecciones en `placa-lab:v1`. Usa sus acciones desde las vistas para que todas lean la misma partida.
 
 ## Modelo, estilos y pruebas
+- `src/components/workshop/ServiceExperiment.vue`: bancos de POST, patrones de RAM y registro térmico; emiten acciones al completar pruebas, no al abrir una explicación.
+- `src/game/experiments.js`: lecturas deterministas del equipo ficticio PL; separadas de la interfaz para probar sus condiciones.
+- `src/game/learningContent.js` y `src/components/workshop/LearningGuide.vue`: objetivos, preguntas con retroalimentación, razones de cada paso y transferencia a otra falla en las cuatro órdenes.
+- `src/game/jackTools.js`: interacción herramienta/superficie; exige contacto con pad y terminal, además de aislamiento e inspección. La secuencia de reparación y el guardado anterior se conservan.
 - `src/game/orders.js`: catálogo de órdenes de taller y compatibilidad con el progreso guardado.
 - `src/components/BoardScene.vue`: cámara, controles, selección, estados y animación temporal.
 - `src/three/model.js`, `parts.js`, `layout.js`: conjuntos físicos, primitivas y disposición.

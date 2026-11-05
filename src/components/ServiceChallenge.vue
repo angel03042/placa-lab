@@ -3,6 +3,9 @@ import OrderProgress from './OrderProgress.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import BootDisplay from './BootDisplay.vue'
 import Icon from './Icon.vue'
+import ServiceExperiment from './workshop/ServiceExperiment.vue'
+import LearningGuide from './workshop/LearningGuide.vue'
+import { thermalSample } from '../game/experiments.js'
 import { applyServiceAction, newServiceJob, serviceOrders } from '../game/serviceChallenges.js'
 
 const props = defineProps({ id:{ type:String, required:true } })
@@ -49,6 +52,7 @@ watch([() => props.id, () => job.value.phase], async () => {
     <button class="case-link" @click="$emit('menu')">← Volver a las órdenes</button>
     <header class="order-header"><div><span class="ticket-kicker"><i></i> ORDEN {{ order.number }} / {{ order.specialty.toUpperCase() }}</span><h1 ref="heading" tabindex="-1">{{ order.title }}</h1></div></header>
     <OrderProgress :labels="phaseNames" :step="phaseIndex" class="svc-progress" aria-label="Etapas del servicio"/>
+    <LearningGuide v-if="job.phase==='intake' || job.phase==='delivered'" :topic="id" :phase="job.phase"/>
     <div v-if="job.phase==='intake'" class="order-intake">
       <article class="intake-card">
         <span class="ticket-kicker">DECLARACIÓN DEL CLIENTE</span><h2>Un equipo en recepción.</h2>
@@ -57,20 +61,28 @@ watch([() => props.id, () => job.value.phase], async () => {
       </article>
       <figure class="svc-intake-figure"><img :src="'/components/'+order.part+'.svg'" :alt="memory?'Identificación del módulo SO-DIMM':'Identificación de una turbina de laptop'"/><figcaption>PIEZA DE REFERENCIA · {{ memory?'SO-DIMM':'TURBINA' }}</figcaption></figure>
     </div>
-    <div v-else-if="job.phase==='diagnosis'" class="svc-grid">
-      <article class="svc-card">
-        <span class="ticket-kicker">BANCO / RECOLECCIÓN DE INDICIOS</span><h2>¿Por dónde empezarías?</h2>
-        <p>«{{ order.quote }}»</p><div class="interview-list">
-          <button v-for="item in order.observations" :key="item.id" @click="act('observe/'+item.id)"><span aria-hidden="true">{{ job.observations.includes(item.id)?'✓':'+' }}</span>{{ item.label }}</button>
-        </div>
-        <div v-if="job.observations.length" class="svc-journal"><h3>Indicios registrados</h3><p v-for="item in order.observations.filter(o=>job.observations.includes(o.id))" :key="item.id">{{ item.result }}</p></div>
-      </article>
+    <template v-else-if="job.phase==='diagnosis'">
+    <div class="svc-grid">
+      <ServiceExperiment :kind="id" @action="act"/>
       <aside class="svc-card svc-notepad"><span class="ticket-kicker">DECISIÓN DE BANCO</span><h2>Elige qué revisar.</h2><p>Usa los indicios de este equipo para decidir cuál sería la primera intervención.</p>
         <div class="interview-list"><button v-for="item in order.suspects" :key="item.id" @click="act('diagnose/'+item.id)">{{item.label}} ↗</button></div>
         <button class="case-link" @click="hinted=!hinted" :aria-expanded="hinted">Consultar una pista</button>
-        <p v-if="hinted" class="case-answer">{{ memory?'Compara la etapa señalada por el indicador de diagnóstico con la compatibilidad del módulo instalado.':'Compara el momento del apagado con la velocidad real de la turbina registrada durante la carga.' }}</p>
+        <p v-if="hinted" class="case-answer">{{ memory?'Completa el POST paso a paso y contrasta la etiqueta con el manual.':'Avanza el registro térmico hasta el apagado y guarda la comparación entre orden de giro y RPM.' }}</p>
+        <div v-if="job.observations.length" class="svc-journal"><h3>Indicios registrados</h3><p v-for="item in order.observations.filter(o=>job.observations.includes(o.id))" :key="item.id">{{ item.result }}</p></div>
+        <p v-if="feedback" class="case-message" role="status">{{ feedback }}</p>
       </aside>
     </div>
+    <LearningGuide v-if="order.evidence.every(key=>job.observations.includes(key))" :topic="id" phase="diagnosis"/>
+    <details class="svc-other"><summary>Comprobaciones complementarias</summary>
+      <article class="svc-card">
+        <div class="interview-list">
+          <button v-for="item in order.observations.filter(o=>!order.evidence.includes(o.id) && o.id!=='display')" :key="item.id" @click="act('observe/'+item.id)"><span aria-hidden="true">{{ job.observations.includes(item.id)?'✓':'+' }}</span>{{ item.label }}</button>
+        </div>
+        <p>{{ memory ? 'Para comparar otra pantalla, selecciona Monitor externo en el simulador y recorre nuevamente el POST.' : 'Una rejilla despejada no confirma giro ni transferencia de calor. Relaciónala con el registro.' }}</p>
+        <a :href="memory ? 'https://www.dell.com/support/kbdoc/en-us/000126066/how-to-diagnose-and-resolve-common-memory-issues-on-a-dell-notebook-pc' : 'https://www.dell.com/support/kbdoc/en-us/000179087/how-to-troubleshoot-fan-issues'" target="_blank" rel="noreferrer">Referencia de diagnóstico del fabricante ↗</a>
+      </article>
+    </details>
+    </template>
     <template v-else-if="job.phase==='repair'">
       <span class="ticket-kicker">BANCO / MONTAJE</span><h2>{{order.benchTitle}}</h2>
       <div class="svc-grid">
@@ -134,6 +146,7 @@ watch([() => props.id, () => job.value.phase], async () => {
           <p>{{step.instruction}}</p><p v-if="stage" class="svc-readback">{{order.procedure[stage-1].result}}</p>
           <button v-if="stage===0" class="ticket-btn dark svc-gap" @click="act('isolate')">Apagar y aislar el equipo</button>
           <button v-else class="ticket-btn dark svc-gap" @click="act('rebuild')">Reconectar batería y cerrar la tapa</button>
+          <LearningGuide :topic="id" phase="repair" :stage="stage"/>
         </aside>
       </div>
     </template>
@@ -141,13 +154,13 @@ watch([() => props.id, () => job.value.phase], async () => {
       <span class="ticket-kicker">{{job.phase==='delivered'?'✓ ORDEN ENTREGADA':'CONTROL DE CALIDAD'}}</span>
       <h2>{{job.phase==='delivered'?'Equipo listo para el cliente.':'Pon a prueba la reparación.'}}</h2>
       <div class="svc-grid">
-        <BootDisplay :on="job.booted" :lines="job.tested?order.testLines:order.bootLines"/>
+        <ServiceExperiment v-if="job.phase==='verify'" :key="id+'-verify'" :kind="id" verify :booted="job.booted" :tested="job.tested" @action="act"/>
+        <BootDisplay v-else :on="job.booted" :lines="job.tested?order.testLines:order.bootLines"/>
         <section class="svc-card">
           <template v-if="job.phase==='verify'">
             <p>{{order.beforeTest}}</p><p>{{ job.tested?order.delivery:job.booted?'El encendido respondió. Falta reproducir la condición original y comprobar el resultado.':'El equipo está cerrado y listo para arrancar.' }}</p>
             <div class="svc-test-actions">
-              <button class="ticket-btn dark" :disabled="job.booted" @click="act('power')">{{job.booted?'✓ Equipo encendido':'Encender la laptop'}}</button>
-              <button class="ticket-btn dark" :disabled="job.tested" @click="act('test')">{{job.tested?'✓ Prueba completada':order.testAction}}</button>
+              <span>{{job.booted?'✓ Arranque comprobado':'○ Arranque pendiente'}}<br>{{job.tested?'✓ Prueba funcional guardada':'○ Prueba funcional pendiente'}}</span>
               <button class="ticket-btn primary" @click="act('deliver')">Entregar el equipo <Icon name="ArrowRight" :size="17"/></button>
             </div>
           </template>
@@ -160,11 +173,11 @@ watch([() => props.id, () => job.value.phase], async () => {
       </div>
       <div v-if="job.tested && !memory" class="svc-chart"><strong>CPU durante la misma exportación</strong>
         <table><caption>Lecturas de este equipo de práctica</caption><thead><tr><th>Registro</th><th>Inicio</th><th>Mitad</th><th>Final</th></tr></thead><tbody>
-          <tr><th>Recibido</th><td>44 °C</td><td>92 °C</td><td>Apagado</td></tr><tr><th>Reparado</th><td>44 °C</td><td>70 °C</td><td>71 °C</td></tr>
+          <tr><th>Recibido</th><td>44 °C</td><td>92 °C</td><td>Apagado</td></tr><tr><th>Reparado</th><td>44 °C</td><td>{{ thermalSample(60, { repaired: true }).temperature }} °C</td><td>71 °C</td></tr>
         </tbody></table>
       </div>
     </template>
-    <p v-if="feedback" class="case-message" role="status">{{ feedback }}</p>
+    <p v-if="feedback && job.phase!=='diagnosis'" class="case-message" role="status">{{ feedback }}</p>
   </section>
 </template>
 
@@ -193,6 +206,7 @@ watch([() => props.id, () => job.value.phase], async () => {
 .svc-test-actions { padding:0; margin-top:17px; } .svc-test-actions button:disabled { background:#d9e6d8; color:#315640; opacity:1; }
 .svc-readback { padding:12px; border-left:3px solid #4a7163; background:#dfe8dc; }
 .svc-again { display:flex; margin-top:7px; }
+.svc-other { margin:16px 0; }.svc-other summary { padding:12px 0; cursor:pointer; font-weight:700; }
 .svc-chart { margin-top:16px; max-width:640px; padding:15px; color:#223c48; border:1px solid #aab9ad; background:#f6f3e8; }
 .svc-chart table { border-collapse:collapse; width:100%; font-size:.95rem; }.svc-chart th,.svc-chart td { border-bottom:1px solid #b2c0b4; text-align:left; padding:5px; }
 .svc-chart caption { caption-side:bottom; text-align:left; font-size:.85rem; padding:6px 5px 0; }

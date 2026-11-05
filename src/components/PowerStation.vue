@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import CircuitLens from './CircuitLens.vue'
 import BootDisplay from './BootDisplay.vue'
+import LearningGuide from './workshop/LearningGuide.vue'
 import { stationStages, operateRepair, restoreRepair, repairLog } from '../game/powerRepair.js'
 
 const events = defineModel({ required:true })
@@ -59,6 +60,7 @@ watch(step, index => {
           <button v-else class="ticket-btn primary" @click="$emit('deliver')">Entregar el equipo reparado ↗</button>
         </template>
         <div class="station-note" role="status"><strong>Lectura de banco</strong>{{ feedback }}</div>
+        <LearningGuide topic="power" phase="repair" :stage="step"/>
       </aside>
     </div>
     <div class="station-files">

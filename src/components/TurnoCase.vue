@@ -6,6 +6,7 @@ import CaseReplay from './CaseReplay.vue'
 import PowerStation from './PowerStation.vue'
 import BootDisplay from './BootDisplay.vue'
 import Icon from './Icon.vue'
+import LearningGuide from './workshop/LearningGuide.vue'
 import { testPoints } from '../simulation.js'
 import { interview, inspections, conclusions, followUps, newTicket, benchReading, pointName, readingKey, reportFeedback } from '../game/turno.js'
 
@@ -23,6 +24,13 @@ const feedback = ref('')
 const inspection = ref('')
 const stageNumber = computed(() => phases.indexOf(ticket.value.phase))
 const display = computed(() => ticket.value.grounded && ticket.value.redPoint ? benchReading(ticket.value.redPoint, ticket.value.powered).display.replace('.', ',') : '— —')
+const interpretation = computed(() => {
+  if (!ticket.value.grounded) return 'Una tensión siempre compara dos puntos. Fija primero la referencia negra en GND; una punta libre no es una lectura de 0 V.'
+  if (!ticket.value.redPoint) return 'Ya tienes referencia. Elige el punto de la etapa que quieres comprobar con la punta roja.'
+  if (!ticket.value.powered) return 'Sin adaptador y con la batería aislada, 0 V es lo esperado. Esta condición no demuestra una avería.'
+  if (ticket.value.redPoint === 'input') return 'La tensión llega a TP1 con la placa conectada. Para seguir el recorrido, compara el otro lado de la protección.'
+  return 'Aquí no hay tensión. Puede faltar alimentación desde una etapa anterior o su habilitación. Compara puntos cercanos antes de atribuirlo a una pieza.'
+})
 const hintsText = [
   'Empieza por el conector de entrada. Una lectura en el núcleo por sí sola dice poco sobre el lugar donde se corta la alimentación.',
   'Fija la punta negra en GND. Conecta el adaptador simulado y mide con la roja en los dos lados de la protección.',
@@ -83,6 +91,7 @@ function restart() {
       <div class="order-tag"><small>ORDEN DE SERVICIO</small><strong>№ 001</strong><span>{{ ticket.phase==='closed'?'EQUIPO ENTREGADO':ticket.phase==='repair'?'EN REPARACIÓN':'DIAGNÓSTICO' }}</span></div>
     </header>
     <OrderProgress :labels="phaseLabels" :step="stageNumber" :digits="2"/>
+    <LearningGuide v-if="['intake','closed'].includes(ticket.phase)" topic="power" :phase="ticket.phase"/>
 
     <div v-if="ticket.phase==='intake'" class="order-intake">
       <article class="intake-card"><span class="ticket-kicker">RECEPCIÓN · LAPTOP CON ENTRADA DC</span>
@@ -111,6 +120,7 @@ function restart() {
           <div class="probe-status"><span><i></i> Negra · {{ ticket.grounded?'GND':'libre' }}</span><span><i></i> Roja · {{ ticket.redPoint?pointName(ticket.redPoint).split(' · ')[0]:'libre' }}</span></div>
           <button class="adapter-switch" role="switch" :aria-checked="ticket.powered" aria-label="Adaptador simulado" @click="patch({powered:!ticket.powered});message=''"><span class="adapter-light"></span>{{ ticket.powered?'Desconectar adaptador':'Conectar adaptador' }}</button>
           <button class="ticket-btn meter-save" @click="record"><Icon name="NotebookPen" :size="17"/> Guardar lectura</button>
+          <div class="station-note" role="status"><strong>Cómo interpretar esta lectura</strong>{{ interpretation }}</div>
         </div><p v-if="message" class="case-message" role="status">{{ message }}</p></aside>
       </div>
       <div class="desk-notes"><section><span class="ticket-kicker">BITÁCORA</span><h3>Lecturas guardadas <small>{{ ticket.readings.length }}</small></h3>
@@ -124,6 +134,7 @@ function restart() {
         <p v-if="hints" class="case-answer" role="status">{{ hintsText[hints-1] }}</p>
         <button class="case-link" @click="emit('reference')">Consultar el encendido de una placa sana ↗</button>
       </section></div>
+      <LearningGuide v-if="['input','protected'].every(point=>ticket.readings.some(reading=>reading.point===point && reading.powered))" topic="power" phase="bench"/>
     </template>
 
     <form v-else-if="ticket.phase==='report'" class="order-report" @submit.prevent="submit">
